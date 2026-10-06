@@ -1,88 +1,71 @@
 # Plan d'implémentation : Sentinel-X — Porte gardée
 
 Source : [SPEC.md](../SPEC.md). Tâches détaillées : [todo.md](todo.md).
-Refait le 2026-10-06 : un seul ESP, plus d'écran, stepper reporté.
-Fenêtre : mardi soir → mercredi soir (gel du code jeudi matin). 3 personnes.
+Refait le 2026-10-06 au soir : objectif « on installe, on lance, on ouvre le dashboard, et TOUT marche ».
 
 ## Vue d'ensemble
 
-Le cœur de la démo, dans l'ordre : **la caméra reconnaît → LED verte/rouge → le servo tire sur un inconnu qui entre → le dashboard montre tout.** On construit d'abord ce qui bloque tout le reste (dépôt partagé, PC serveur, lien chiffré), puis la porte en tranches verticales qui se démontrent chacune seule, puis le dashboard.
+Le matériel est câblé et testé (LED, DHT11, servo, capteur de gaz). La reconnaissance et la page « Visages » existent. Il reste à **tout relier et tout automatiser** :
+
+- **Installer une fois** (`install.bat`) : dépendances, modèles, Mosquitto, certificats, mots de passe et fichier de réglages de l'ESP, tout généré automatiquement. Seule question posée : le nom et le mot de passe du Wi-Fi.
+- **Téléverser l'ESP une fois** depuis Arduino IDE (son fichier de réglages a été généré à l'installation).
+- **Lancer** (`start.bat`) : un seul programme démarre le broker chiffré, la caméra, la logique de la porte, la liaison avec l'ESP et le dashboard, puis ouvre le navigateur.
+- **Le dashboard** a trois onglets : **Surveillance** (caméra, verdict, armer/désarmer, historique avec captures), **Capteurs** (température, humidité, gaz en courbes, état de l'ESP), **Visages** (enregistrer, supprimer, régler le seuil).
 
 ## Décisions d'architecture
 
-- **Un seul ESP8266** (`door-node`) : un programme, une connexion TLS ; le 2ᵉ ESP reste en secours.
-- **Arduino IDE pour le firmware** : déjà installé et testé sur le PC serveur, pas besoin de PlatformIO.
-- **Le PC serveur est celui du coéquipier** (ports USB-A pour la C270 et l'ESP) ; le code y arrive par GitHub.
-- **`guard.decide` est une fonction pure** : la logique de tir se teste sans caméra, sans ESP, sans broker.
-- **Double vérification du tir** : le PC décide, l'ESP vérifie la fraîcheur du lien.
-- **TLS ESP8266 avec CA + NTP** ; repli sur l'empreinte du certificat si la mémoire ou l'heure posent problème. Jamais `setInsecure()`.
-- **Chaque branchement = un schéma** clair, sans fil qui passe au-dessus d'un trou où il ne va pas.
+- **Un seul programme serveur** (`python -m sentinel.app`) lance lui-même Mosquitto en sous-processus : rien d'autre à démarrer à la main.
+- **Certificats générés en Python** (`cryptography`), en courbe elliptique P-256 : plus légers pour l'ESP8266 que RSA. Le certificat du broker est valable pour `192.168.137.1` (l'adresse fixe du partage de connexion Windows) et `localhost`.
+- **Heure du certificat fixée dans le firmware** (`setX509Time`) : l'ESP valide le certificat sans Internet ni NTP.
+- **Ordres vers l'ESP en texte simple** (`green`, `red`, `idle`, numéro de tir) au lieu de JSON : pas de bibliothèque JSON à installer dans Arduino IDE. L'ESP renvoie ses mesures en JSON écrit à la main.
+- **Un seul thread possède la caméra et les modèles** ; la logique de la porte tourne dans ce thread, et le client MQTT ne publie que quand l'état change.
+- **Tout reste sur le PC** : dashboard sur `127.0.0.1` ; broker accessible seulement avec certificat + mot de passe ; secrets dans `.env` et `secrets.h`, jamais dans git.
 
 ## Graphe de dépendances
 
 ```
-T2 dépôt + PC serveur ──┬── T5 broker TLS ── T6 ESP en TLS + LED ──┐
-                        │                                          ├── T7 « lumière » ── T8 « capture » ── T11 dashboard v1 ── T12 dashboard v2
-T1 OpenCV ✅ ── T4 face-id ─────────────────────────────────────────┘                                          │
-T3 guard + tests ───────────────────────────────── T10 « tir » ── T9 capteurs ─────────────────────────────────┘
+T5 liaison chiffrée (certificats, broker, réglages) ──┬── T6 firmware de l'ESP
+                                                      └── T7 serveur ↔ ESP (MQTT + logique de la porte)
+T3 guard ✅ ── T4 visages ✅ ── T15 page Visages ✅ ───────────┘
+T7 ── T8 historique + captures + alarme ── T11 dashboard Surveillance + Capteurs ── T13 install.bat / start.bat + README
 ```
-
-## Répartition suggérée
-
-| Personne | Tâches |
-|---|---|
-| Vision | T4, puis T8 (capture) |
-| Matériel + firmware | T6, T9, T10 (câblage + croquis) |
-| Serveur | T2, T5, T3, T7, T11, T12, T15 |
 
 ## Liste des tâches
 
-### Phase 1 : Fondations (mardi soir)
-- [x] T1 : Environnement Python + OpenCV YuNet qui tourne
-- [ ] T2 : Dépôt GitHub partagé + PC serveur prêt (code, venv, C270)
-- [x] T3 : `guard.decide` + tests des règles de tir
-- [ ] T4 : face-id — enrôlement + reconnaissance en direct (code fait, à vérifier devant la C270)
-- [ ] T5 : Broker Mosquitto TLS + client Python
+### Fait
+- [x] T1 : Python 3.14 + OpenCV
+- [x] T3 : logique de tir (`guard.decide`) + tests
+- [x] T4 : reconnaissance des visages (à vérifier devant la C270)
+- [x] T15 : page Visages du dashboard (à vérifier devant la C270)
+- [x] Matériel : LED D0/D8, DHT11 D1, servo D2, gaz A0 — câblés et testés
 
-**Checkpoint 1** : sur le PC serveur, la C270 reconnaît les 3 membres ; pytest vert ; un client sans certificat est refusé par le broker.
+### Phase A : relier l'ESP au PC
+- [ ] T5 : Liaison chiffrée — certificats, configuration Mosquitto, mots de passe, `secrets.h` de l'ESP, générés par une commande
+- [ ] T6 : Firmware définitif `door-node.ino` — Wi-Fi, TLS, LED, servo, capteurs, sécurité en cas de coupure
+- [ ] T7 : Serveur ↔ ESP — le programme lance Mosquitto, publie LED et tirs, reçoit les mesures
 
-### Phase 2 : La porte, en tranches (mercredi matin)
-- [ ] T6 : L'ESP se connecte en TLS et allume ses LED sur ordre MQTT
-- [ ] T7 : Tranche « lumière » — visage connu/inconnu → LED verte/rouge
-- [ ] T8 : Tranche « capture » — inconnu → alarme + capture + événement en base
-- [ ] T9 : Les capteurs publient température, humidité et gaz
-- [ ] T10 : Tranche « tir » — servo + règles de tir + failsafe
+**Checkpoint A** : tests verts ; la configuration Mosquitto démarre ; le firmware compile.
 
-**Checkpoint 2** : critères de réussite 1 à 5 démontrés sur breadboard.
+### Phase B : tout afficher
+- [ ] T8 : Historique des passages (SQLite), captures des inconnus, alarme sonore
+- [ ] T11 : Dashboard en onglets — Surveillance (verdict, armer, historique) et Capteurs (courbes, état ESP)
 
-### Phase 3 : Dashboard (mercredi après-midi)
-- [ ] T11 : Dashboard v1 — message, personne + capture, historique
-- [ ] T12 : Dashboard v2 — caméra en direct, température/humidité/gaz, état ESP, armer/désarmer
-- [ ] T15 : Page « Visages » — enregistrer, supprimer et régler la reconnaissance depuis le dashboard (code fait le 2026-10-06, à vérifier devant la C270)
+### Phase C : installer et lancer en une commande
+- [ ] T13 : `install.bat`, `start.bat`, README en 3 étapes ; vérifications finales
 
-**Checkpoint 3** : les 7 critères de réussite passent.
+**Checkpoint final** : sur le PC serveur, install → téléversement ESP → start → tout fonctionne depuis le dashboard.
 
-### Phase 4 : Gel du code (mercredi soir)
-- [ ] T13 : Répétition de la démo + outils CONSTRAINTS + README
-
-### Plus tard (si le temps le permet)
-- [ ] T14 : Stepper — la caméra balaie gauche ↔ droite (ULN2003 à trouver)
-- [ ] Pièces 3D (arbalète, support caméra) — gérées par l'équipe, hors code
+### Plus tard
+- [ ] T14 : moteur de la caméra (ULN2003)
+- [ ] Pièces 3D (équipe)
 
 ## Risques et parades
 
 | Risque | Impact | Parade |
 |---|---|---|
-| Pas de dépôt GitHub → code bloqué sur un PC sans USB-A | Élevé | T2 en premier ; en dépannage, clé USB / zip |
-| TLS trop lourd pour l'ESP8266 (RAM, heure) | Élevé | T6 tôt ; empreinte du certificat au lieu de la CA |
-| Wi-Fi école bloque ESP ↔ PC | Élevé | Partage de connexion du PC serveur ; règle pare-feu pour le port 8883 |
-| Servo + stepper font rebooter l'ESP (courant USB) | Moyen | Stepper coupé pendant le tir ; condensateur 470 µF ; chargeur séparé |
-| Servo qui bouge au démarrage de l'ESP | Moyen | Servo sur D2 (jamais D4) ; position « repos » fixée dès `setup()` |
-| Reconnaissance ratée (éclairage) | Moyen | 5+ photos par personne dans la salle de démo ; seuil réglable |
-| Erreur de câblage (déjà arrivé 2 fois) | Moyen | Un schéma sans croisement par étape, extrémités écrites en texte |
-| Pentest des autres groupes jeudi après-midi | Moyen | TLS + mots de passe sur le broker ; dashboard seulement sur le réseau de table |
-
-## Questions ouvertes
-
-1. Lien du dépôt GitHub (bloque T2).
-2. Carte ULN2003 trouvée ? (décide T14)
+| TLS trop lourd pour l'ESP8266 | Élevé | Certificats EC P-256 (petits) ; buffers BearSSL réduits ; heure fixée, pas de NTP |
+| Pare-feu Windows bloque le port 8883 | Élevé | `install.bat` ajoute la règle (demande les droits administrateur une fois) |
+| Wi-Fi de l'école isole l'ESP | Élevé | Partage de connexion du PC serveur (adresse fixe 192.168.137.1) |
+| Je ne peux pas tester l'ESP réel d'ici | Moyen | Firmware compilé avec arduino-cli si autorisé ; logique testée côté serveur ; checklist pour l'essai réel |
+| Servo + capteur de gaz + ESP sur un seul USB | Moyen | Port USB direct du PC ; condensateur ou chargeur séparé si l'ESP redémarre au tir |
+| Pentest jeudi | Moyen | TLS + mot de passe par client ; dashboard local uniquement ; prénoms validés |

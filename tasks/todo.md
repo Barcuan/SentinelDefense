@@ -2,199 +2,86 @@
 
 Plan : [plan.md](plan.md). Spec : [SPEC.md](../SPEC.md). Règles : [CONSTRAINTS.md](../CONSTRAINTS.md).
 
-Commandes de vérification communes :
-`pytest` · `ruff check .` · `mypy server/sentinel` · `gitleaks detect --redact --no-banner` · Arduino IDE « Vérifier » sur `firmware/door-node/door-node.ino`
-
+Vérifications communes : `pytest` · `ruff check .` · `mypy server/sentinel` · firmware compilé (arduino-cli si disponible).
 Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémités écrites en texte.
 
 ---
 
-## Phase 1 : Fondations
+## Fait
 
-### T1 : Environnement Python + OpenCV YuNet ✅
-Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 12 ms par image.
-- [x] `pip install -r server/requirements.txt` passe
-- [x] La webcam s'affiche avec un cadre sur chaque visage
-- [x] `server/models/` et `data/` ignorés par git
-
-### T2 : Dépôt GitHub partagé + PC serveur prêt
-**Description :** L'équipe crée le dépôt ; on y pousse le code ; le PC serveur (coéquipier) clone, crée le venv, télécharge les modèles, et lance l'aperçu avec la **C270** (pas la webcam intégrée).
-**Critères :**
-- [x] Le dépôt contient le code, sans modèle, photo ni secret (poussé le 2026-10-06 sur github.com/Barcuan/SentinelDefense)
-- [ ] Sur le PC serveur : `pytest` passe et l'aperçu `face_id.py` montre l'image de la C270 avec un cadre sur le visage
-- [x] L'index de la C270 est réglable sans toucher au code : `SENTINEL_CAMERA=1` (fait avec T4)
-**Vérification :** aperçu lancé sur le PC serveur ; `gitleaks detect --redact --no-banner`.
-**Dépend de :** T1 ; lien du dépôt fourni par l'équipe
-**Fichiers :** `README.md` (installation), `server/sentinel/face_id.py`
-**Taille :** S
-
-### T3 : `guard.decide` + tests ✅
-**Description :** Machine d'états pure (idle/green/red) et les 4 règles de tir de la spec.
-**Critères :**
-- [x] Tests : connu → jamais de tir ; inconnu désarmé → pas de tir ; inconnu armé loin → pas de tir ; inconnu armé proche → 1 tir puis délai de 10 s ; plus de visage depuis 3 s → idle
-- [x] Aucun import matériel/réseau dans `guard.py`
-**Vérification :** `pytest`.
-**Dépend de :** —
-**Fichiers :** `server/sentinel/guard.py`, `server/tests/test_guard.py`
-**Taille :** S
-
-### T4 : face-id — enrôlement + reconnaissance (code fait, à vérifier devant la C270)
-**Description :** `enroll` calcule les empreintes SFace de `data/faces/<nom>/*.jpg` ; la boucle live renvoie `Face(name, authorized, score)` + image ; l'aperçu affiche le nom ou « inconnu ».
-Code livré le 2026-10-06 : `python -m sentinel.enroll --capture <nom>` (10 photos à la webcam), `python -m sentinel.enroll` (recalcul), aperçu `python sentinel/face_id.py` avec nom + score. Caméra : `SENTINEL_CAMERA`, seuil : `SENTINEL_THRESHOLD`.
-**Critères :**
-- [ ] Chaque membre enrôlé est reconnu (score ≥ 0.363) sous l'éclairage de la salle
-- [ ] Une personne non enrôlée → « inconnu »
-- [x] Seuil réglable sans toucher au code
-**Vérification :** démo à 3 + 1 inconnu devant la C270.
-**Dépend de :** T1 (T2 pour le test avec la C270)
-**Fichiers :** `server/sentinel/face_id.py`, `server/sentinel/enroll.py`, `server/tests/test_face_id.py`
-**Taille :** M
-
-### T5 : Broker Mosquitto TLS + client Python
-**Description :** Installer Mosquitto sur le PC serveur ; CA auto-signée et certificats ; `mosquitto.conf` (8883, TLS, mots de passe) ; wrapper `mqtt.py`.
-**Critères :**
-- [ ] `mosquitto_pub/sub` avec CA + identifiants fonctionne sur 8883
-- [ ] Le même client sans CA ou sans mot de passe est refusé (critère 5)
-- [ ] Certificats et mots de passe hors de git
-**Vérification :** les deux commandes ci-dessus ; `gitleaks detect --redact --no-banner`.
-**Dépend de :** T2
-**Fichiers :** `server/scripts/gen_certs.py`, `link/mosquitto.conf`, `server/sentinel/mqtt.py`, `.gitignore`
-**Taille :** M
-
-### ✅ Checkpoint 1
-- [ ] Sur le PC serveur, la C270 reconnaît les 3 membres
-- [ ] pytest vert, ruff propre
-- [ ] Client sans certificat refusé par le broker
+- [x] **T1** Python 3.14 + OpenCV 5.0, détection en 12 ms (`37310f4`)
+- [x] **T3** `guard.decide` : tir après 3 s de visage inconnu, armé, 10 s entre deux tirs (`8fd75d7`)
+- [x] **T4** Reconnaissance SFace + `enroll` (`d6a7665`) — à vérifier devant la C270 : les 3 membres reconnus, un inconnu rejeté
+- [x] **T15** Dashboard : caméra en direct + page Visages (`024b42d`) — même vérification
+- [x] **T2** Dépôt GitHub `Barcuan/SentinelDefense`, README d'installation
+- [x] **Matériel** LED rouge D0, verte D8, DHT11 D1, servo D2, gaz A0 : câblés et testés un par un
 
 ---
 
-## Phase 2 : La porte, en tranches
+## Phase A : relier l'ESP au PC
 
-### T6 : L'ESP se connecte en TLS et allume ses LED sur ordre
-**Description :** Croquis `door-node.ino` : Wi-Fi (partage de connexion du PC serveur), NTP, MQTT TLS, `sentinel/door/status` avec LWT, et `sentinel/door/led` qui pilote les LED déjà câblées (rouge D0, verte D8). Pas de nouveau câblage.
+### T5 : Liaison chiffrée générée en une commande
+**Description :** `python -m sentinel.setup` demande le nom et le mot de passe du Wi-Fi, puis génère dans `link/` (ignoré par git) : une CA et un certificat broker EC P-256 (valables pour `192.168.137.1` et `localhost`), `mosquitto.conf` (8883, TLS, pas d'anonyme), le fichier de mots de passe (un compte serveur, un compte ESP) ; dans `.env` les mots de passe ; dans `firmware/door-node/secrets.h` le Wi-Fi, l'adresse du broker, le compte ESP, la CA et l'heure de génération.
 **Critères :**
-- [ ] `{"online": true}` reçu sur le PC à la mise sous tension ; débrancher l'ESP → `{"online": false}`
-- [ ] `mosquitto_pub -t sentinel/door/led -m '{"state":"green"}'` allume la verte ; `red` la rouge ; `idle` éteint
-- [ ] Seul `secrets.h.example` est commité
-**Vérification :** Téléverser depuis Arduino IDE + `mosquitto_sub -t 'sentinel/#'`.
-**Dépend de :** T5
+- [ ] Le certificat broker est signé par la CA et valable pour 192.168.137.1 et localhost (testé)
+- [ ] `secrets.h` contient tout ce dont le firmware a besoin, et rien n'est ajouté à git (testé)
+- [ ] Relancer `setup` ne casse pas une installation existante (garde les fichiers sauf `--force`)
+**Fichiers :** `server/sentinel/setup.py`, `server/tests/test_setup.py`, `.gitignore`
+
+### T6 : Firmware définitif `door-node.ino`
+**Description :** Wi-Fi ; MQTT sur TLS (CA + heure fixée) avec mot de passe ; `sentinel/door/status` avec LWT ; `sentinel/door/led` (`green`/`red`/`idle`) ; `sentinel/door/fire` (numéro de tir, ignoré s'il est répété) ; `sentinel/door/climate` toutes les 2 s (temp, hum, gas) ; servo au repos dès le démarrage ; lien coupé depuis plus de 2 s → LED éteintes, pas de tir.
+**Critères :**
+- [ ] Compile pour « NodeMCU 1.0 (ESP-12E Module) » avec les bibliothèques `PubSubClient` et `DHT sensor library`
+- [ ] Aucun secret dans le fichier : tout vient de `secrets.h`
+- [ ] Checklist d'essai réel écrite dans le README
 **Fichiers :** `firmware/door-node/door-node.ino`, `firmware/door-node/secrets.h.example`
-**Taille :** M
 
-### T7 : Tranche « lumière »
-**Description :** Boucle serveur : face-id → `guard.decide` → `sentinel/door/led`.
+### T7 : Serveur ↔ ESP
+**Description :** au démarrage, `sentinel.app` lance Mosquitto avec `link/mosquitto.conf`, se connecte en TLS, s'abonne à `climate` et `status`. La logique de la porte (`guard.decide`) tourne dans le thread caméra : publie `led` quand l'état change, `fire` à chaque tir. Armé/désarmé côté serveur (désarmé au démarrage).
 **Critères :**
-- [ ] Membre devant la caméra → LED verte en < 2 s, nom dans les logs du serveur
-- [ ] Inconnu → LED rouge en < 2 s
-- [ ] Personne → LED éteintes après 3 s
-**Vérification :** test chronométré devant la C270.
-**Dépend de :** T3, T4, T6
-**Fichiers :** `server/sentinel/app.py`
-**Taille :** M
+- [ ] Une mesure `climate` valide est enregistrée ; une mesure invalide est ignorée sans planter (testé)
+- [ ] `led` n'est publié que quand l'état change ; un tir = un message `fire` avec un numéro qui augmente (testé avec un faux client)
+- [ ] Sans Mosquitto installé, le dashboard démarre quand même et l'affiche clairement
+**Fichiers :** `server/sentinel/mqtt.py`, `server/sentinel/door.py`, `server/sentinel/app.py`, tests
 
-### T8 : Tranche « capture »
-**Description :** En rouge : alarme sur le PC (`winsound`), capture JPEG dans `data/snapshots/` ; chaque passage (connu ou inconnu) devient un événement SQLite (heure, nom/inconnu, capture).
+### ✅ Checkpoint A
+- [ ] pytest, ruff, mypy verts ; firmware compilé ; commit + push + `graphify update .`
+
+---
+
+## Phase B : tout afficher
+
+### T8 : Historique, captures, alarme
+**Description :** SQLite `data/sentinel.db` : un passage = une ligne (heure, nom ou inconnu, score, capture si inconnu, tir ou non) ; mesures capteurs (une par 2 s, gardées 24 h). Alarme `winsound` qui ne bloque pas la caméra, une fois par passage inconnu.
 **Critères :**
-- [ ] Inconnu → alarme pendant l'état rouge (critère 2)
-- [ ] Une capture + une ligne en base par passage, pas une par image
+- [ ] Un passage = une ligne, pas une par image (testé)
+- [ ] Les mesures se relisent dans l'ordre, les plus anciennes que 24 h sont effacées (testé)
 - [ ] Captures et base hors de git
-**Vérification :** `sqlite3 data/sentinel.db "select * from events"` + fichier présent.
-**Dépend de :** T7
-**Fichiers :** `server/sentinel/store.py`, `server/sentinel/app.py`, `server/tests/test_store.py`
-**Taille :** M
+**Fichiers :** `server/sentinel/store.py`, `server/tests/test_store.py`, `server/sentinel/app.py`
 
-### T9 : Les capteurs publient température, humidité et gaz
-**Description :** DHT11 sur D1 (câblé, testé) et capteur de gaz sur A0 (AO → 2 × 100K → A0) ; le croquis publie `sentinel/door/climate` (temp, hum, gas) toutes les 2 s.
+### T11 : Dashboard en onglets
+**Description :** **Surveillance** : caméra, verdict en gros (« Bienvenue <nom> » / « ACCES REFUSE » / « En attente »), bouton armer/désarmer, état de l'ESP, historique des passages avec captures. **Capteurs** : valeurs actuelles et courbes température, humidité, gaz (dessinées sans bibliothèque externe), état de l'ESP. **Visages** : la page existante.
 **Critères :**
-- [ ] Valeurs plausibles reçues sur le PC (souffler sur le DHT fait monter l'humidité ; gel hydroalcoolique près du capteur de gaz fait monter `gas`)
-- [ ] Une lecture ratée n'envoie rien plutôt qu'une valeur fausse
-**Vérification :** `mosquitto_sub -t sentinel/door/climate`.
-**Dépend de :** T6
-**Fichiers :** `firmware/door-node/door-node.ino`
-**Taille :** S
-
-### T10 : Tranche « tir »
-**Description :** Câblage du servo sur D2 avec schéma ; position de repos dès `setup()` ; guard publie `sentinel/door/fire` ; l'ESP vérifie la fraîcheur du lien avant de tirer.
-**Critères :**
-- [ ] Inconnu pendant 3 s + armé → exactement 1 tir (critère 3)
-- [ ] Désarmé ou connu → aucun tir ; le servo ne bouge pas au démarrage de l'ESP
-- [ ] Broker coupé → LED éteintes, pas de tir (critère 4)
-**Vérification :** les 3 scénarios devant la C270 ; `pytest`.
-**Dépend de :** T7
-**Fichiers :** `firmware/door-node/door-node.ino`, `server/sentinel/app.py`
-**Taille :** M
-
-### ✅ Checkpoint 2
-- [ ] Critères de réussite 1 à 5 démontrés
-- [ ] pytest, ruff, gitleaks verts
-- [ ] Commit + push + `graphify update .`
+- [ ] Un passage apparaît en < 3 s sans recharger ; l'historique survit à un redémarrage
+- [ ] Armer/désarmer change le comportement ; au démarrage : désarmé
+- [ ] ESP débranché → « hors ligne » en < 5 s
+**Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
 
 ---
 
-## Phase 3 : Dashboard
+## Phase C : installer et lancer
 
-### T11 : Dashboard v1 — message, personne, historique
-**Description :** Page FastAPI : message en gros (« Bienvenue <nom> » / « ACCES REFUSE » / « En attente »), dernière personne + capture, historique des passages.
+### T13 : Installation et lancement en une commande
+**Description :** `install.bat` : vérifie Python, crée le venv, installe les dépendances, télécharge les modèles, installe Mosquitto (winget), ajoute la règle de pare-feu pour le port 8883, lance `sentinel.setup`. `start.bat` : lance `sentinel.app` et ouvre le navigateur. README réécrit en 3 étapes : installer, téléverser l'ESP, lancer.
 **Critères :**
-- [ ] Un passage apparaît en < 3 s sans recharger la page (critères 1 et 2)
-- [ ] L'historique survit à un redémarrage du serveur
-**Vérification :** navigateur sur `http://localhost:8000`.
-**Dépend de :** T8
-**Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
-**Taille :** M
-
-### T12 : Dashboard v2 — caméra, capteurs, ESP, armer
-**Description :** Flux MJPEG de la C270 avec les cadres et noms ; température, humidité et gaz en direct avec des courbes ; ESP en ligne / hors ligne ; bouton armer/désarmer (désarmé au démarrage).
-**Critères :**
-- [ ] La caméra s'affiche en direct dans la page (critère 6)
-- [ ] Débrancher l'ESP → « hors ligne » en < 5 s
-- [ ] Le bouton armer/désarmer change réellement le comportement de T10 ; au redémarrage : désarmé
-**Vérification :** démo navigateur.
-**Dépend de :** T10, T11
-**Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
-**Taille :** M
-
-### T15 : Enregistrer et régler les visages depuis le dashboard (code fait, à vérifier devant la C270)
-Livré le 2026-10-06, avancé avant T5 à la demande de l'équipe : `python -m sentinel.app`, http://localhost:8000. Caméra en direct (MJPEG) + noms, enregistrement 10 photos, suppression, curseur du seuil avec score en direct. Le flux caméra de T12 est donc déjà fait.
-**Description :** Page « Visages » du dashboard : liste des personnes enregistrées (nombre de photos), champ prénom + bouton « Enregistrer ce visage » qui prend 10 photos à la C270 et recalcule, bouton supprimer, réglage du seuil avec le score en direct de la personne devant la caméra. Réutilise `enroll.build_gallery` et `face_id.identify`.
-**Critères :**
-- [ ] Un nouveau membre enregistré depuis la page est reconnu sans redémarrer le serveur
-- [ ] Changer le seuil change immédiatement le verdict connu/inconnu affiché
-- [ ] Supprimer une personne la rend « inconnue »
-**Vérification :** démo navigateur devant la C270.
-**Dépend de :** T4, T12
-**Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
-**Taille :** M
-
-### ✅ Checkpoint 3
-- [ ] Les 7 critères de réussite de la spec passent
-
----
-
-## Phase 4 : Gel du code
-
-### T13 : Démo + rendu
-**Description :** Installer gitleaks, faire passer CONSTRAINTS, README (installation, câblage, commandes), 2 répétitions complètes de la démo.
-**Critères :**
-- [ ] `ruff`, `mypy`, `pytest`, `gitleaks` passent (ou avertissements expliqués)
-- [ ] Un membre qui n'a pas codé une partie peut la lancer depuis le README
-- [ ] Démo de bout en bout réussie 2 fois de suite
-**Dépend de :** Checkpoint 3
-**Fichiers :** `README.md`
-**Taille :** S
+- [ ] Les deux scripts fonctionnent depuis un double-clic
+- [ ] README : installation + checklist d'essai réel + dépannage
+- [ ] Toutes les vérifications passent ; push sur GitHub
+**Fichiers :** `install.bat`, `start.bat`, `README.md`
 
 ---
 
 ## Plus tard
 
-### T14 : La caméra balaie gauche ↔ droite (si ULN2003 trouvée)
-**Description :** 28BYJ-48 via ULN2003 sur D5, D6, D7, RX ; allers-retours lents ; moteur coupé pendant un tir et à l'arrêt.
-**Critères :**
-- [ ] Balayage continu sans retarder les mesures ni le tir ; l'ESP ne redémarre pas pendant un tir
-- [ ] La reconnaissance marche encore pendant le balayage
-**Dépend de :** T10
-**Taille :** S
-
-### Pièces 3D (équipe, hors code)
-- [ ] Arbalète : le servo déclenche le tir 5 fois sur 5, visée au torse
-- [ ] Support caméra
+- [ ] **T14** Moteur de la caméra via ULN2003 (D5, D6, D7, RX), coupé pendant un tir
+- [ ] **Pièces 3D** (équipe) : arbalète déclenchée 5 fois sur 5, visée au torse ; support caméra
