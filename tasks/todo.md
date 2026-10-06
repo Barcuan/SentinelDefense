@@ -28,11 +28,11 @@ Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémité
 - [x] Relancer `setup` ne casse pas une installation existante (garde les fichiers sauf `--force`)
 **Fichiers :** `server/sentinel/setup.py`, `server/tests/test_setup.py`, `.gitignore`
 
-### T6 : Firmware définitif `door-node.ino`
+### T6 : Firmware définitif `door-node.ino` ✅ (compilé avec arduino-cli, esp8266 3.1.2 ; checklist d'essai dans T13)
 **Description :** Wi-Fi ; MQTT sur TLS (CA + heure fixée) avec mot de passe ; `sentinel/door/status` avec LWT ; `sentinel/door/led` (`green`/`red`/`idle`) ; `sentinel/door/fire` (numéro de tir, ignoré s'il est répété) ; `sentinel/door/climate` toutes les 2 s (temp, hum, gas) ; servo au repos dès le démarrage ; lien coupé depuis plus de 2 s → LED éteintes, pas de tir.
 **Critères :**
-- [ ] Compile pour « NodeMCU 1.0 (ESP-12E Module) » avec les bibliothèques `PubSubClient` et `DHT sensor library`
-- [ ] Aucun secret dans le fichier : tout vient de `secrets.h`
+- [x] Compile pour « NodeMCU 1.0 (ESP-12E Module) » avec les bibliothèques `PubSubClient` et `DHT sensor library`
+- [x] Aucun secret dans le fichier : tout vient de `secrets.h`
 - [ ] Checklist d'essai réel écrite dans le README
 **Fichiers :** `firmware/door-node/door-node.ino`, `firmware/door-node/secrets.h.example`
 

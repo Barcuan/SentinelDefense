@@ -41,7 +41,7 @@ T7 ── T8 historique + captures + alarme ── T11 dashboard Surveillance + 
 
 ### Phase A : relier l'ESP au PC
 - [x] T5 : Liaison chiffrée — certificats, configuration Mosquitto, mots de passe, `secrets.h` de l'ESP, générés par une commande
-- [ ] T6 : Firmware définitif `door-node.ino` — Wi-Fi, TLS, LED, servo, capteurs, sécurité en cas de coupure
+- [x] T6 : Firmware définitif `door-node.ino` — Wi-Fi, TLS, LED, servo, capteurs, sécurité en cas de coupure
 - [ ] T7 : Serveur ↔ ESP — le programme lance Mosquitto, publie LED et tirs, reçoit les mesures
 
 **Checkpoint A** : tests verts ; la configuration Mosquitto démarre ; le firmware compile.
