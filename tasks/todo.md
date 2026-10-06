@@ -102,24 +102,24 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 **Fichiers :** `server/sentinel/store.py`, `server/sentinel/app.py`, `server/tests/test_store.py`
 **Taille :** M
 
-### T9 : Le HC-SR04 publie la distance
-**Description :** Câblage du HC-SR04 (TRIG D3, ECHO D1 via pont diviseur) avec schéma ; le croquis publie `sentinel/door/distance` toutes les 200 ms.
+### T9 : Le capteur DHT publie température et humidité
+**Description :** Câblage du capteur DHT (données sur D1, alimentation sur la broche 3V de l'ESP) avec schéma ; le croquis publie `sentinel/door/climate` toutes les 2 s.
 **Critères :**
-- [ ] Main à 20 cm → ~20 reçu sur le PC
-- [ ] L'ESP démarre normalement avec le capteur branché (D3 est une broche de démarrage)
-**Vérification :** `mosquitto_sub -t sentinel/door/distance`.
+- [ ] Valeurs plausibles reçues sur le PC (souffler sur le capteur fait monter l'humidité)
+- [ ] Une lecture ratée n'envoie rien plutôt qu'une valeur fausse
+**Vérification :** `mosquitto_sub -t sentinel/door/climate`.
 **Dépend de :** T6
 **Fichiers :** `firmware/door-node/door-node.ino`
 **Taille :** S
 
 ### T10 : Tranche « tir »
-**Description :** Câblage du servo sur D2 avec schéma ; position de repos dès `setup()` ; guard publie `sentinel/door/fire` ; l'ESP revérifie distance + lien avant de tirer.
+**Description :** Câblage du servo sur D2 avec schéma ; position de repos dès `setup()` ; guard publie `sentinel/door/fire` ; l'ESP vérifie la fraîcheur du lien avant de tirer.
 **Critères :**
-- [ ] Inconnu + < 50 cm + armé → exactement 1 tir (critère 3)
+- [ ] Inconnu pendant 3 s + armé → exactement 1 tir (critère 3)
 - [ ] Désarmé ou connu → aucun tir ; le servo ne bouge pas au démarrage de l'ESP
 - [ ] Broker coupé → LED éteintes, pas de tir (critère 4)
-**Vérification :** les 3 scénarios sur breadboard ; `pytest`.
-**Dépend de :** T7, T9
+**Vérification :** les 3 scénarios devant la C270 ; `pytest`.
+**Dépend de :** T7
 **Fichiers :** `firmware/door-node/door-node.ino`, `server/sentinel/app.py`
 **Taille :** M
 
@@ -142,8 +142,8 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 **Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
 **Taille :** M
 
-### T12 : Dashboard v2 — caméra, distance, ESP, armer
-**Description :** Flux MJPEG de la C270 avec les cadres et noms ; distance en direct ; ESP en ligne / hors ligne ; bouton armer/désarmer (désarmé au démarrage).
+### T12 : Dashboard v2 — caméra, température/humidité, ESP, armer
+**Description :** Flux MJPEG de la C270 avec les cadres et noms ; température et humidité en direct avec une courbe ; ESP en ligne / hors ligne ; bouton armer/désarmer (désarmé au démarrage).
 **Critères :**
 - [ ] La caméra s'affiche en direct dans la page (critère 6)
 - [ ] Débrancher l'ESP → « hors ligne » en < 5 s
@@ -177,7 +177,7 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 ### T14 : La caméra balaie gauche ↔ droite (si ULN2003 trouvée)
 **Description :** 28BYJ-48 via ULN2003 sur D5, D6, D7, RX ; allers-retours lents ; moteur coupé pendant un tir et à l'arrêt.
 **Critères :**
-- [ ] Balayage continu sans retarder la distance ni le tir ; l'ESP ne redémarre pas pendant un tir
+- [ ] Balayage continu sans retarder les mesures ni le tir ; l'ESP ne redémarre pas pendant un tir
 - [ ] La reconnaissance marche encore pendant le balayage
 **Dépend de :** T10
 **Taille :** S

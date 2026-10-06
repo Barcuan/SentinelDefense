@@ -11,9 +11,9 @@ Une porte « gardée » pour la démo. La webcam C270 identifie la personne deva
 
 - **connue** → LED verte, « Bienvenue <nom> » sur le dashboard ;
 - **inconnue** → LED rouge + alarme sonore (haut-parleurs du PC) + « ACCES REFUSE » + capture d'écran ;
-- **inconnue ET entre dans la salle** (HC-SR04 < 50 cm) **ET système armé** → le servo SG90 déclenche l'arbalète imprimée en 3D (projectile mousse/papier).
+- **inconnue pendant 3 s ET système armé** → le servo SG90 déclenche l'arbalète imprimée en 3D (projectile mousse/papier).
 
-Le dashboard remonte tout : ce que voit la caméra, la personne devant la porte (nom ou inconnu, capture), le message affiché, l'historique des passages, la distance mesurée, l'état de l'ESP, et le bouton armer/désarmer.
+Le dashboard remonte tout : ce que voit la caméra, la personne devant la porte (nom ou inconnu, capture), le message affiché, l'historique des passages, la température et l'humidité (capteur DHT sur l'ESP, avec courbe), l'état de l'ESP, et le bouton armer/désarmer.
 
 Plus tard, si le temps le permet : le moteur 28BYJ-48 (via ULN2003) fait balayer la caméra de gauche à droite.
 
@@ -23,9 +23,9 @@ Plus tard, si le temps le permet : le moteur 28BYJ-48 (via ULN2003) fait balayer
 |---|---|---|---|
 | `link` | Broker MQTT TLS, certificats, contrat des messages | PC serveur | — |
 | `face-id` | C270 → détection + reconnaissance → `connu(nom)` / `inconnu` + capture | PC serveur | — |
-| `door-node` | L'unique ESP8266 : LED verte/rouge, HC-SR04, servo (stepper plus tard) | ESP8266 | `link` |
-| `guard` | Machine d'états : visage + distance + armé → commandes ; stockage des événements | PC serveur | `face-id`, `link` |
-| `dashboard` | Page web : caméra en direct, personne, message, historique, distance, état ESP, armer/désarmer | PC serveur | `guard` |
+| `door-node` | L'unique ESP8266 : LED verte/rouge, capteur DHT (température/humidité), servo (stepper plus tard) | ESP8266 | `link` |
+| `guard` | Machine d'états : visage + armé → commandes ; stockage des événements | PC serveur | `face-id`, `link` |
+| `dashboard` | Page web : caméra en direct, personne, message, historique, température/humidité, état ESP, armer/désarmer | PC serveur | `guard` |
 
 Ordre de construction : `link` ∥ `face-id` → `door-node` ∥ `guard` → `dashboard`.
 
@@ -38,7 +38,7 @@ Broker Mosquitto sur le PC serveur, **TLS port 8883**, CA auto-signée + utilisa
 | Topic | Sens | Payload |
 |---|---|---|
 | `sentinel/door/led` | PC → ESP | `{"state": "idle"\|"green"\|"red"}` |
-| `sentinel/door/distance` | ESP → PC | `{"cm": 42.0}` toutes les 200 ms |
+| `sentinel/door/climate` | ESP → PC | `{"temp": 22.5, "hum": 48.0}` toutes les 2 s |
 | `sentinel/door/fire` | PC → ESP | `{"id": 17}` (un message = un tir ; `id` évite de tirer deux fois sur un renvoi) |
 | `sentinel/door/status` | ESP → PC | `{"online": true}` (retained + LWT `{"online": false}`) |
 
@@ -55,11 +55,11 @@ Changer ce contrat = **demander à l'équipe**.
 Règles de tir (toutes nécessaires) :
 
 1. état = `red` ;
-2. distance < `ENTRY_CM` (50 cm, réglable) ;
+2. le visage est resté inconnu pendant `RED_BEFORE_FIRE_S` (3 s, réglable) : un visage connu entre-temps ou 3 s sans visage remettent le compte à zéro ;
 3. système **armé** (désarmé au démarrage, armé depuis le dashboard) ;
-4. un seul tir par intrusion, puis 10 s avant de pouvoir retirer.
+4. 10 s minimum entre deux tirs.
 
-Le firmware revérifie localement la distance avant d'actionner le servo et ne tire jamais s'il a perdu le lien depuis plus de 2 s.
+Le firmware ne tire jamais s'il a perdu le lien depuis plus de 2 s.
 
 ## Stack
 
@@ -104,14 +104,11 @@ data/                    faces/, snapshots/, sentinel.db (ignoré par git — ph
 Python : fonctions simples, types annotés, logique pure séparée du matériel (testable sans caméra ni MQTT).
 
 ```python
-def decide(state: State, face: Face | None, distance_cm: float | None, armed: bool, now: float) -> tuple[State, Command]:
-    """Pure : pas d'I/O, testé dans tests/test_guard.py. Renvoie le nouvel état et la commande."""
-    if face is None:
-        return Command("idle") if now - state.last_face_at > 3 else state.command
-    if face.authorized:
-        return Command("green", text=f"Bienvenue {face.name}")
-    fire = armed and distance_cm < ENTRY_CM and now - state.last_fire_at > FIRE_COOLDOWN_S
-    return Command("red", fire=fire, text="ACCES REFUSE")
+# extrait de server/sentinel/guard.py (pure, testé dans server/tests/test_guard.py)
+red_since = state.red_since if state.command.state == "red" else now
+fire = armed and now - red_since >= RED_BEFORE_FIRE_S and now - state.last_fire_at >= FIRE_COOLDOWN_S
+cmd = Command("red", "ACCES REFUSE", fire)
+return State(cmd, now, now if fire else state.last_fire_at, red_since), cmd
 ```
 
 Firmware : un seul `.ino`, broches en `const int` en tête de fichier, secrets dans `secrets.h` (non commité, copie de `secrets.h.example`).
@@ -131,11 +128,10 @@ Alimentation : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas
 |---|---|---|
 | D0 | LED rouge (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
 | D8 | LED verte (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
-| D3 | HC-SR04 TRIG | à faire |
-| D1 | HC-SR04 ECHO, via pont diviseur (10K en haut, 2 × 10K en série en bas ≈ 3,3V) | à faire |
+| D1 | Capteur DHT (température/humidité), données ; alimenté par la broche **3V** de l'ESP, pas par la ligne + | à faire |
 | D2 | Servo SG90 (signal) ; + sur la ligne +, − sur la ligne − | à faire |
 | D5, D6, D7, RX | ULN2003 IN1–IN4 pour le stepper | plus tard |
-| D4 | libre | — |
+| D3, D4 | libres | — |
 
 Le servo n'est **jamais** sur D4 : cette broche envoie des impulsions au démarrage, qui pourraient déclencher l'arbalète.
 
@@ -151,10 +147,10 @@ Courant : un port USB donne 500–900 mA. Le firmware coupe le stepper pendant u
 
 1. Un membre enrôlé devant la C270 → LED verte + « Bienvenue <nom> » sur le dashboard en < 2 s.
 2. Un inconnu → LED rouge + alarme en < 2 s, capture visible sur le dashboard.
-3. Inconnu + < 50 cm + armé → un seul tir ; désarmé ou connu → aucun tir.
+3. Inconnu pendant 3 s + armé → un seul tir ; désarmé ou connu → aucun tir.
 4. Lien coupé → l'ESP éteint ses LED et ne tire pas.
 5. `mosquitto_sub` sans certificat ne peut pas se connecter (lien chiffré prouvé).
-6. Le dashboard affiche la caméra en direct, la distance, l'état de l'ESP et l'historique des passages, qui survit à un redémarrage.
+6. Le dashboard affiche la caméra en direct, la température et l'humidité, l'état de l'ESP et l'historique des passages, qui survit à un redémarrage.
 7. `pytest`, `ruff`, `gitleaks` passent.
 
 ## Questions ouvertes
@@ -162,4 +158,4 @@ Courant : un port USB donne 500–900 mA. Le firmware coupe le stepper pendant u
 1. **Dépôt GitHub** : à créer par l'équipe ; bloque l'installation du code sur le PC serveur.
 2. **Carte ULN2003** : à trouver ; sans elle, la caméra reste fixe.
 
-Tranché le 2026-10-06 : pas de capteurs DHT22/MQ-2/PIR ni d'IA prédictive (accord du prof) ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer, alarme sur le PC ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; seuil 50 cm ; Python 3.14 + OpenCV 5.0 fonctionnent.
+Tranché le 2026-10-06 : kit capteurs du sujet non fourni, pas de MQ-2/PIR ni d'IA prédictive (accord du prof) ; le capteur température/humidité de l'équipe sert seulement à l'affichage ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer, alarme sur le PC ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; HC-SR04 abandonné au profit d'un capteur température/humidité, le tir part après 3 s de visage inconnu ; Python 3.14 + OpenCV 5.0 fonctionnent.
