@@ -124,15 +124,15 @@ Firmware : un `main.cpp` par nœud, broches en `constexpr` en tête de fichier, 
 ## Câblage (à confirmer sur breadboard)
 
 **panel (ESP n°1)** — 8 broches :
-- LCD 1602 en mode 4 bits : RS, E, D4, D5, D6, D7 → 6 broches ; RW → GND ; VDD → 5V (VIN) ; VSS → GND.
+- LCD 1602 en mode 4 bits : RS, E, D4, D5, D6, D7 → 6 broches ; RW → GND ; VDD → 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB) ; VSS → GND.
 - Contraste VO : vers GND à travers ~1 kΩ (3 × 330 Ω en série), à ajuster si l'écran est vide ou tout noir.
 - Rétroéclairage : A → 5V via 330 Ω, K → GND.
 - LED verte et rouge : une résistance **330 Ω** en série chacune.
 
 **turret (ESP n°2)** — 7 broches :
 - HC-SR04 : TRIG direct ; ECHO sort en 5V → pont diviseur (10K en haut, 2 × 10K en série en bas ≈ 3,3V) avant l'ESP.
-- Servo SG90 : signal + 5V (VIN) + GND.
-- Stepper 28BYJ-48 via carte **ULN2003** (IN1–IN4) : 5V (VIN). Si l'ESP redémarre quand un moteur bouge → condensateur 470 µF ou alim 5V séparée, masse commune.
+- Servo SG90 : signal + 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB) + GND.
+- Stepper 28BYJ-48 via carte **ULN2003** (IN1–IN4) : 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB). Si l'ESP redémarre quand un moteur bouge → condensateur 470 µF ou alim 5V séparée, masse commune.
 
 ## Limites
 
