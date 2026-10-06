@@ -20,7 +20,7 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 ### T2 : Dépôt GitHub partagé + PC serveur prêt
 **Description :** L'équipe crée le dépôt ; on y pousse le code ; le PC serveur (coéquipier) clone, crée le venv, télécharge les modèles, et lance l'aperçu avec la **C270** (pas la webcam intégrée).
 **Critères :**
-- [ ] Le dépôt contient le code, sans modèle, photo ni secret
+- [x] Le dépôt contient le code, sans modèle, photo ni secret (poussé le 2026-10-06 sur github.com/Barcuan/SentinelDefense)
 - [ ] Sur le PC serveur : `pytest` passe et l'aperçu `face_id.py` montre l'image de la C270 avec un cadre sur le visage
 - [x] L'index de la C270 est réglable sans toucher au code : `SENTINEL_CAMERA=1` (fait avec T4)
 **Vérification :** aperçu lancé sur le PC serveur ; `gitleaks detect --redact --no-banner`.
