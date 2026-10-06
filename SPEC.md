@@ -9,7 +9,7 @@ Le prof a autorisé à sortir du socle du sujet (capteurs DHT22/MQ-2/PIR non fou
 
 Une porte « gardée » pour la démo. Une webcam identifie la personne devant la porte :
 
-- **autorisée** → LED verte, « Bienvenue <nom> » sur le LCD ;
+- **autorisée** → LED verte, « Bienvenue <nom> » sur le dashboard ;
 - **inconnue** → LED rouge + alarme sonore (haut-parleurs du PC) + « ACCES REFUSE » + capture d'écran ;
 - **inconnue ET entre dans la salle** (HC-SR04 < 50 cm) **ET système armé** → l'arbalète imprimée en 3D tire (servo SG90) un projectile en mousse/papier.
 
@@ -21,7 +21,7 @@ La caméra balaie la porte de gauche à droite (stepper). Le dashboard enregistr
 |---|---|---|---|
 | `link` | Broker MQTT TLS, certificats, contrat des messages | PC | — |
 | `face-id` | C270 → détection + reconnaissance → `autorisé(nom)` / `inconnu` + capture | PC | — |
-| `panel` | ESP8266 n°1 : LCD 1602 + LED verte/rouge | ESP8266 | `link` |
+| `panel` | ESP8266 n°1 : LED verte/rouge | ESP8266 | `link` |
 | `turret` | ESP8266 n°2 : HC-SR04, servo de l'arbalète, stepper qui balaie la caméra | ESP8266 | `link` |
 | `guard` | Machine d'états : visage + distance + armé → commandes ; stockage des événements | PC | `face-id`, `link` |
 | `dashboard` | Page web : personne devant la porte, historique des passages, armer/désarmer | PC | `guard` |
@@ -45,7 +45,7 @@ Changer ce contrat = **demander à l'équipe** (trois personnes codent contre lu
 
 ## Logique `guard`
 
-| État | Entrée | LED / alarme / LCD |
+| État | Entrée | LED / alarme / dashboard |
 |---|---|---|
 | `idle` | aucun visage depuis 3 s | éteint |
 | `green` | visage autorisé (score SFace ≥ 0.363) | vert, « Bienvenue <nom> », 5 s |
@@ -123,11 +123,11 @@ Firmware : un `main.cpp` par nœud, broches en `constexpr` en tête de fichier, 
 
 ## Câblage (à confirmer sur breadboard)
 
-**panel (ESP n°1)** — 8 broches :
-- LCD 1602 en mode 4 bits : RS, E, D4, D5, D6, D7 → 6 broches ; RW → GND ; VDD → 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB) ; VSS → GND.
-- Contraste VO : directement à GND (contraste maximum). Si les caractères sont illisibles car trop sombres : pont diviseur 10K vers 5V / 3 × 330 Ω vers GND (≈ 0,45V sur VO).
-- Rétroéclairage : A → 5V via 330 Ω, K → GND.
-- LED verte et rouge : une résistance **330 Ω** en série chacune.
+Alimentation des deux ESP : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB), masse sur **G**.
+
+**panel (ESP n°1)** — 2 broches, câblé et testé le 2026-10-06 :
+- LED rouge : D0 → patte longue, patte courte → 330 Ω → GND.
+- LED verte : D8 → patte longue, patte courte → 330 Ω → GND.
 
 **turret (ESP n°2)** — 7 broches :
 - HC-SR04 : TRIG direct ; ECHO sort en 5V → pont diviseur (10K en haut, 2 × 10K en série en bas ≈ 3,3V) avant l'ESP.
@@ -142,7 +142,7 @@ Firmware : un `main.cpp` par nœud, broches en `constexpr` en tête de fichier, 
 
 ## Critères de réussite
 
-1. Un membre enrôlé devant la C270 → LED verte + son nom sur le LCD en < 2 s.
+1. Un membre enrôlé devant la C270 → LED verte + son nom sur le dashboard en < 2 s.
 2. Un inconnu → LED rouge + alarme en < 2 s, capture visible sur le dashboard.
 3. Inconnu + < 50 cm + armé → un seul tir ; désarmé ou autorisé → aucun tir.
 4. Lien coupé → le panel passe en `idle`, la turret ne tire pas.
@@ -155,4 +155,4 @@ Firmware : un `main.cpp` par nœud, broches en `constexpr` en tête de fichier, 
 1. **Carte ULN2003** : à trouver par l'équipe ; sans elle, la caméra reste fixe (T14 abandonnée).
 2. **Python 3.14** : si `opencv-python` n'a pas encore de wheel, venv en Python 3.12.
 
-Tranché le 2026-10-06 : pas de capteurs DHT22/MQ-2/PIR ni d'IA prédictive (accord du prof) ; deux ESP8266 ; LCD sans module I2C sur son propre ESP ; pas de buzzer, alarme sur le PC ; stepper = balayage gauche ↔ droite ; pièces 3D gérées par l'équipe ; seuil 50 cm.
+Tranché le 2026-10-06 : pas de capteurs DHT22/MQ-2/PIR ni d'IA prédictive (accord du prof) ; deux ESP8266 ; pas d'écran sur la porte, les messages s'affichent sur le dashboard (LCD abandonné, câblage trop instable) ; pas de buzzer, alarme sur le PC ; stepper = balayage gauche ↔ droite ; pièces 3D gérées par l'équipe ; seuil 50 cm.

@@ -10,7 +10,7 @@ On lève d'abord les deux paris risqués (OpenCV sur ce Python, TLS sur ESP8266)
 ## Décisions d'architecture
 
 - **Contrat MQTT figé dans SPEC.md avant tout code** : c'est ce qui permet aux 3 personnes de travailler en parallèle sans s'attendre.
-- **Deux ESP aux rôles clairs** : `panel` (ce qu'on voit : LCD + LED) et `turret` (ce qui bouge : distance, arbalète, caméra).
+- **Deux ESP aux rôles clairs** : `panel` (ce qu'on voit : LED verte/rouge ; les messages vont sur le dashboard) et `turret` (ce qui bouge : distance, arbalète, caméra).
 - **`guard.decide` est une fonction pure** : la logique de tir se teste sans caméra, sans ESP, sans broker.
 - **Double vérification du tir** : le PC décide, la turret revérifie distance + fraîcheur du lien.
 - **Réseau = partage de connexion du PC portable** : IP du broker stable, démo reproductible.
@@ -47,7 +47,7 @@ T12 pièces 3D (équipe, hors code) ── montage final de T8
 
 ### Phase 2 : La porte, en tranches (mardi soir → mercredi midi)
 - [ ] T4 : face-id — enrôlement + reconnaissance en direct
-- [ ] T6 : Tranche « lumière » — visage → LED verte/rouge + LCD
+- [ ] T6 : Tranche « lumière » — visage → LED verte/rouge + message sur le dashboard
 - [ ] T7 : Tranche « alarme » — inconnu → son sur le PC + capture + événement en base
 - [ ] T10 : turret se connecte en TLS et publie la distance
 - [ ] T8 : Tranche « tir » — distance → servo, avec failsafe
@@ -71,7 +71,6 @@ T12 pièces 3D (équipe, hors code) ── montage final de T8
 | Pas de wheel `opencv-python` pour Python 3.14 | Élevé | T1 en premier ; venv Python 3.12 sinon |
 | TLS trop lourd pour l'ESP8266 (RAM, heure) | Élevé | T3 tôt ; buffers BearSSL réduits ; empreinte au lieu de CA |
 | Wi-Fi école bloque ESP ↔ PC | Élevé | Partage de connexion du PC ; règle pare-feu Windows pour le port 8883 |
-| LCD 5V piloté en 3,3V : écran vide | Moyen | RW à la masse (écriture seule), ajuster le contraste ; sinon tout afficher sur le dashboard |
 | Un moteur fait rebooter l'ESP (chute de tension) | Moyen | Condensateur 470 µF, ou alim 5V séparée, masse commune |
 | Reconnaissance ratée (éclairage, caméra en mouvement) | Moyen | 5+ photos par personne dans la salle ; balayage lent ; seuil réglable |
 | Pas de carte ULN2003 | Faible | Caméra fixe, T14 abandonnée |

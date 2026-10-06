@@ -73,9 +73,9 @@ Commandes de vérification communes :
 **Taille :** M
 
 ### T6 : Tranche « lumière »
-**Description :** Boucle serveur face-id → `guard.decide` → `sentinel/door/cmd` ; le panel allume vert/rouge et écrit sur le LCD (mode 4 bits).
+**Description :** Boucle serveur face-id → `guard.decide` → `sentinel/door/cmd` ; le panel allume vert/rouge ; le texte (« Bienvenue <nom> », « ACCES REFUSE ») est affiché par le dashboard.
 **Critères :**
-- [ ] Membre devant la caméra → LED verte + « Bienvenue <nom> » en < 2 s (critère 1)
+- [ ] Membre devant la caméra → LED verte en < 2 s, nom visible dans les logs du serveur (affichage sur le dashboard : T9)
 - [ ] Inconnu → LED rouge + « ACCES REFUSE » en < 2 s
 - [ ] Personne → tout s'éteint après 3 s
 **Vérification :** test sur breadboard, chronométré.
