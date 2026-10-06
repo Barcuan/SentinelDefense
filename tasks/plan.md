@@ -47,7 +47,7 @@ T7 ── T8 historique + captures + alarme ── T11 dashboard Surveillance + 
 **Checkpoint A** : tests verts ; la configuration Mosquitto démarre ; le firmware compile.
 
 ### Phase B : tout afficher
-- [ ] T8 : Historique des passages (SQLite), captures des inconnus, alarme sonore
+- [x] T8 : Historique des passages (SQLite), captures des inconnus, alarme sonore
 - [ ] T11 : Dashboard en onglets — Surveillance (verdict, armer, historique) et Capteurs (courbes, état ESP)
 
 ### Phase C : installer et lancer en une commande

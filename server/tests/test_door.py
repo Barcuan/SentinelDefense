@@ -91,5 +91,33 @@ def test_door_reports_verdict_text_for_the_dashboard():
     assert door.command.text == "Bienvenue Sacha"
 
 
+def passages(door, frames):
+    started = []
+    for now, face in frames:
+        door.step(face, now)
+        if door.passage_started:
+            started.append(face.name if face else "?")
+    return started
+
+
+def test_one_passage_per_person_not_one_per_frame():
+    door, _ = make_door()
+
+    assert passages(door, [(0, SACHA), (0.1, SACHA), (0.2, SACHA)]) == ["Sacha"]
+
+
+def test_a_different_person_starts_a_new_passage():
+    door, _ = make_door()
+
+    assert passages(door, [(0, SACHA), (1, INTRUS), (2, INTRUS)]) == ["Sacha", None]
+
+
+def test_face_lost_briefly_is_the_same_passage_but_coming_back_later_is_new():
+    door, _ = make_door()
+    frames = [(0, SACHA), (1, None), (2, SACHA), (10, None), (11, SACHA)]
+
+    assert passages(door, frames) == ["Sacha", "Sacha"]
+
+
 def test_missing_mosquitto_is_reported_as_none(tmp_path):
     assert find_mosquitto([Path(tmp_path / "nulle-part" / "mosquitto.exe")]) is None

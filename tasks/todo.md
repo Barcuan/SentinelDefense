@@ -51,12 +51,12 @@ Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémité
 
 ## Phase B : tout afficher
 
-### T8 : Historique, captures, alarme
+### T8 : Historique, captures, alarme ✅
 **Description :** SQLite `data/sentinel.db` : un passage = une ligne (heure, nom ou inconnu, score, capture si inconnu, tir ou non) ; mesures capteurs (une par 2 s, gardées 24 h). Alarme `winsound` qui ne bloque pas la caméra, une fois par passage inconnu.
 **Critères :**
-- [ ] Un passage = une ligne, pas une par image (testé)
-- [ ] Les mesures se relisent dans l'ordre, les plus anciennes que 24 h sont effacées (testé)
-- [ ] Captures et base hors de git
+- [x] Un passage = une ligne, pas une par image (testé)
+- [x] Les mesures se relisent dans l'ordre, les plus anciennes que 24 h sont effacées (testé)
+- [x] Captures et base hors de git
 **Fichiers :** `server/sentinel/store.py`, `server/tests/test_store.py`, `server/sentinel/app.py`
 
 ### T11 : Dashboard en onglets

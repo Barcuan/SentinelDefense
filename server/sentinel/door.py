@@ -26,7 +26,8 @@ class Door:
         self.command: Command = self.state.command
         self._led: str | None = None
         self._last_shot = 0
-        self.on_fire: Callable[[], None] | None = None
+        self._passage: tuple[str, str | None] | None = None
+        self.passage_started = False  # vrai pendant l'image où une nouvelle personne apparaît
 
     def step(self, face: Face | None, now: float) -> Command:
         self.state, self.command = decide(self.state, face, self.armed, now)
@@ -37,6 +38,14 @@ class Door:
             # Numéro de tir en secondes (tient dans un long de l'ESP), toujours croissant, jamais retenu.
             self._last_shot = max(self._last_shot + 1, int(self.wall_clock()))
             self.link.publish(T_FIRE, str(self._last_shot))
-            if self.on_fire:
-                self.on_fire()
+        self._track_passage(face)
         return self.command
+
+    def _track_passage(self, face: Face | None) -> None:
+        """Un passage = une personne (connue ou non) jusqu'au retour à l'état idle : une ligne d'historique, pas une par image."""
+        self.passage_started = False
+        if self.command.state == "idle":
+            self._passage = None
+        elif face is not None and (self.command.state, face.name) != self._passage:
+            self._passage = (self.command.state, face.name)
+            self.passage_started = True

@@ -5,6 +5,7 @@
 
 import re
 import shutil
+import sys
 import threading
 import time
 from collections.abc import AsyncIterator, Iterator
@@ -34,6 +35,7 @@ from sentinel.face_id import (
 )
 from sentinel.guard import Face
 from sentinel.mqtt import Link
+from sentinel.store import SNAPSHOTS, Store, valid_snapshot
 
 STATIC = Path(__file__).parent / "static"
 # Le prénom devient un nom de dossier : lettres (accents compris), chiffres, espace, tiret. Jamais de / ni de ..
@@ -62,11 +64,26 @@ class Enrollment:
         self.last = now
 
 
+def alarm() -> None:
+    """Sirène courte sur le haut-parleur du PC, dans un thread à part pour ne pas figer la caméra."""
+    if sys.platform != "win32":
+        return
+    import winsound
+
+    def play() -> None:
+        for frequency in (880, 660, 880, 660):
+            winsound.Beep(frequency, 180)
+
+    threading.Thread(target=play, daemon=True).start()
+
+
 class Camera:
     """Un seul thread lit la caméra et fait toute la vision : les modèles OpenCV ne se partagent pas entre threads."""
 
-    def __init__(self, door: Door) -> None:
+    def __init__(self, door: Door, store: Store) -> None:
         self.door = door
+        self.store = store
+        self._passage_id = 0
         self.threshold = face_id.THRESHOLD
         self.gallery: Gallery = {}
         self.jpeg: bytes | None = None
@@ -131,7 +148,18 @@ class Camera:
             faces.append({"name": face.name, "score": round(face.score, 3)})
             seen.append(face)
         # Pendant un enregistrement, la personne est encore « inconnue » : la porte l'ignore (pas de tir).
-        self.door.step(None if enrollment else pick_face(seen), time.monotonic())
+        chosen = None if enrollment else pick_face(seen)
+        command = self.door.step(chosen, time.monotonic())
+        if self.door.passage_started and chosen is not None:
+            snapshot = None
+            if not chosen.authorized:
+                snapshot = f"{int(time.time() * 1000)}.jpg"
+                SNAPSHOTS.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(str(SNAPSHOTS / snapshot), shown)
+                alarm()
+            self._passage_id = self.store.add_passage(time.time(), chosen.name, chosen.score, snapshot)
+        if command.fire:
+            self.store.mark_fired(self._passage_id)
         if enrollment and not enrollment.done:
             hint = f"Enregistrement de {enrollment.name} : {enrollment.taken}/{SHOTS}"
             cv2.putText(shown, hint, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
@@ -142,8 +170,19 @@ class Camera:
             self.jpeg = buf.tobytes()
 
 
+store = Store()
 link = Link()
-camera = Camera(Door(link))
+camera = Camera(Door(link), store)
+
+
+def record_reading(reading: dict[str, float]) -> None:
+    now = time.time()
+    store.add_reading(now, reading)
+    if int(now) % 300 == 0:  # environ toutes les 5 min
+        store.prune(now)
+
+
+link.on_climate = record_reading
 
 
 @asynccontextmanager
@@ -233,6 +272,24 @@ def delete_face(name: str) -> dict[str, str]:
     shutil.rmtree(folder)
     camera.rebuild_requested = True
     return {"status": "deleted"}
+
+
+@app.get("/api/passages")
+def passages() -> list[dict[str, Any]]:
+    return store.passages()
+
+
+@app.get("/api/readings")
+def readings(minutes: int = 60) -> list[dict[str, Any]]:
+    minutes = max(1, min(minutes, 24 * 60))
+    return store.readings(since=time.time() - minutes * 60)
+
+
+@app.get("/snapshots/{name}")
+def snapshot(name: str) -> FileResponse:
+    if not valid_snapshot(name) or not (SNAPSHOTS / name).is_file():
+        raise HTTPException(404, "Capture introuvable.")
+    return FileResponse(SNAPSHOTS / name, media_type="image/jpeg")
 
 
 class Arm(BaseModel):
