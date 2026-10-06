@@ -1,54 +1,55 @@
 # Spec : Sentinel-X — Porte gardée
 
-Statut : validé par l'équipe (3 personnes), mis à jour le 2026-10-06. Code à geler jeudi 2026-10-08 au matin.
+Statut : validé par l'équipe (3 personnes), mis à jour le 2026-10-06 (un seul ESP, plus d'écran LCD). Code à geler jeudi 2026-10-08 au matin.
 Voir aussi [CONSTRAINTS.md](CONSTRAINTS.md).
 
 Le prof a autorisé à sortir du socle du sujet (capteurs DHT22/MQ-2/PIR non fournis) : on fait la porte gardée, sans capteurs environnementaux ni IA prédictive.
 
 ## Objectif
 
-Une porte « gardée » pour la démo. Une webcam identifie la personne devant la porte :
+Une porte « gardée » pour la démo. La webcam C270 identifie la personne devant la porte :
 
-- **autorisée** → LED verte, « Bienvenue <nom> » sur le dashboard ;
+- **connue** → LED verte, « Bienvenue <nom> » sur le dashboard ;
 - **inconnue** → LED rouge + alarme sonore (haut-parleurs du PC) + « ACCES REFUSE » + capture d'écran ;
-- **inconnue ET entre dans la salle** (HC-SR04 < 50 cm) **ET système armé** → l'arbalète imprimée en 3D tire (servo SG90) un projectile en mousse/papier.
+- **inconnue ET entre dans la salle** (HC-SR04 < 50 cm) **ET système armé** → le servo SG90 déclenche l'arbalète imprimée en 3D (projectile mousse/papier).
 
-La caméra balaie la porte de gauche à droite (stepper). Le dashboard enregistre chaque personne scannée (capture, nom ou inconnu, heure) pour le suivi, et permet d'armer/désarmer.
+Le dashboard remonte tout : ce que voit la caméra, la personne devant la porte (nom ou inconnu, capture), le message affiché, l'historique des passages, la distance mesurée, l'état de l'ESP, et le bouton armer/désarmer.
+
+Plus tard, si le temps le permet : le moteur 28BYJ-48 (via ULN2003) fait balayer la caméra de gauche à droite.
 
 ## Carte des capacités
 
 | Module | Rôle | Tourne sur | Dépend de |
 |---|---|---|---|
-| `link` | Broker MQTT TLS, certificats, contrat des messages | PC | — |
-| `face-id` | C270 → détection + reconnaissance → `autorisé(nom)` / `inconnu` + capture | PC | — |
-| `panel` | ESP8266 n°1 : LED verte/rouge | ESP8266 | `link` |
-| `turret` | ESP8266 n°2 : HC-SR04, servo de l'arbalète, stepper qui balaie la caméra | ESP8266 | `link` |
-| `guard` | Machine d'états : visage + distance + armé → commandes ; stockage des événements | PC | `face-id`, `link` |
-| `dashboard` | Page web : personne devant la porte, historique des passages, armer/désarmer | PC | `guard` |
+| `link` | Broker MQTT TLS, certificats, contrat des messages | PC serveur | — |
+| `face-id` | C270 → détection + reconnaissance → `connu(nom)` / `inconnu` + capture | PC serveur | — |
+| `door-node` | L'unique ESP8266 : LED verte/rouge, HC-SR04, servo (stepper plus tard) | ESP8266 | `link` |
+| `guard` | Machine d'états : visage + distance + armé → commandes ; stockage des événements | PC serveur | `face-id`, `link` |
+| `dashboard` | Page web : caméra en direct, personne, message, historique, distance, état ESP, armer/désarmer | PC serveur | `guard` |
 
-Ordre de construction : `link` ∥ `face-id` → `panel` ∥ `turret` ∥ `guard` → `dashboard`.
+Ordre de construction : `link` ∥ `face-id` → `door-node` ∥ `guard` → `dashboard`.
 
-Répartition suggérée : vision (`face-id`) / firmware (`panel`, `turret`) / serveur (`link`, `guard`, `dashboard`).
+Le PC serveur est le PC d'un coéquipier : c'est lui qui a des ports USB-A pour la C270 et l'ESP. Le code y arrive par le dépôt GitHub de l'équipe.
 
 ## Contrat MQTT (module `link`)
 
-Broker Mosquitto sur le PC, **TLS port 8883**, CA auto-signée + utilisateur/mot de passe par nœud. JSON UTF-8.
+Broker Mosquitto sur le PC serveur, **TLS port 8883**, CA auto-signée + utilisateur/mot de passe. JSON UTF-8.
 
 | Topic | Sens | Payload |
 |---|---|---|
-| `sentinel/door/cmd` | PC → panel | `{"state": "idle"\|"green"\|"red", "text": "ACCES REFUSE"}` |
-| `sentinel/turret/distance` | turret → PC | `{"cm": 42.0}` toutes les 200 ms |
-| `sentinel/turret/fire` | PC → turret | `{"id": 17}` (un message = un tir ; `id` évite de tirer deux fois sur un renvoi) |
-| `sentinel/<node>/status` | nœud → PC | `{"online": true}` (retained + LWT `{"online": false}`) |
+| `sentinel/door/led` | PC → ESP | `{"state": "idle"\|"green"\|"red"}` |
+| `sentinel/door/distance` | ESP → PC | `{"cm": 42.0}` toutes les 200 ms |
+| `sentinel/door/fire` | PC → ESP | `{"id": 17}` (un message = un tir ; `id` évite de tirer deux fois sur un renvoi) |
+| `sentinel/door/status` | ESP → PC | `{"online": true}` (retained + LWT `{"online": false}`) |
 
-Changer ce contrat = **demander à l'équipe** (trois personnes codent contre lui).
+Changer ce contrat = **demander à l'équipe**.
 
 ## Logique `guard`
 
 | État | Entrée | LED / alarme / dashboard |
 |---|---|---|
-| `idle` | aucun visage depuis 3 s | éteint |
-| `green` | visage autorisé (score SFace ≥ 0.363) | vert, « Bienvenue <nom> », 5 s |
+| `idle` | aucun visage depuis 3 s | LED éteintes |
+| `green` | visage connu (score SFace ≥ 0.363) | vert, « Bienvenue <nom> », 5 s |
 | `red` | visage inconnu | rouge + alarme PC, « ACCES REFUSE », capture enregistrée |
 
 Règles de tir (toutes nécessaires) :
@@ -58,42 +59,43 @@ Règles de tir (toutes nécessaires) :
 3. système **armé** (désarmé au démarrage, armé depuis le dashboard) ;
 4. un seul tir par intrusion, puis 10 s avant de pouvoir retirer.
 
-Le firmware `turret` revérifie localement la distance avant d'actionner le servo et ne tire jamais s'il a perdu le lien depuis plus de 2 s.
+Le firmware revérifie localement la distance avant d'actionner le servo et ne tire jamais s'il a perdu le lien depuis plus de 2 s.
 
 ## Stack
 
-- **PC** : Python (venv), `opencv-python` (YuNet détection + SFace reconnaissance, modèles ONNX), `paho-mqtt`, `fastapi` + `uvicorn`, `numpy`, SQLite (stdlib), son d'alarme via `winsound` (stdlib).
-- **Dashboard** : une page HTML + JS servie par FastAPI, rafraîchie par polling. Pas de framework front.
-- **Firmware** : C++ Arduino via PlatformIO, `PubSubClient`, `WiFiClientSecure` (BearSSL), `LiquidCrystal`, `Servo`, `AccelStepper`.
+- **PC serveur** : Python (venv), `opencv-python` (YuNet détection + SFace reconnaissance, modèles ONNX), `paho-mqtt`, `fastapi` + `uvicorn`, `numpy`, SQLite (stdlib), son d'alarme via `winsound` (stdlib).
+- **Dashboard** : une page HTML + JS servie par FastAPI ; flux caméra en MJPEG ; données rafraîchies par polling. Pas de framework front.
+- **Firmware** : un croquis Arduino (`.ino`) compilé avec **Arduino IDE**, déjà installé et testé sur le PC serveur. Cœur ESP8266, `PubSubClient`, `WiFiClientSecure` (BearSSL), `Servo`.
 - **Broker** : Mosquitto (Windows).
-- **Réseau** : partage de connexion du PC portable (le Wi-Fi de l'école isole souvent les appareils).
+- **Réseau** : partage de connexion du PC serveur (le Wi-Fi de l'école isole souvent les appareils).
 
 ## Commandes
 
 ```
 python -m venv .venv && .venv\Scripts\activate
 pip install -r server/requirements.txt
-python server/scripts/gen_certs.py                  # CA + certs broker/nœuds dans link/certs/
+python server/scripts/get_models.py                  # modèles ONNX YuNet + SFace
+python server/scripts/gen_certs.py                   # CA + certs dans link/certs/
 mosquitto -c link/mosquitto.conf -v
 python -m sentinel.enroll data/faces                 # data/faces/<nom>/*.jpg → data/faces.npz
 uvicorn sentinel.app:app --app-dir server --port 8000
-pio run -d firmware/panel -t upload
-pio run -d firmware/turret -t upload
-pytest server/tests
+pytest
 ruff check . && mypy server/sentinel
 gitleaks detect --redact --no-banner
 ```
 
+Firmware : ouvrir `firmware/door-node/door-node.ino` dans Arduino IDE, carte « NodeMCU 1.0 (ESP-12E Module) », Téléverser.
+
 ## Structure
 
 ```
-firmware/panel/          PlatformIO : src/main.cpp, include/secrets.h.example
-firmware/turret/         idem
+firmware/door-node/      door-node.ino, secrets.h.example (secrets.h ignoré par git)
 link/                    mosquitto.conf, certs/ (ignoré par git)
 server/sentinel/         face_id.py, guard.py, mqtt.py, store.py, app.py, enroll.py
 server/sentinel/static/  index.html (dashboard)
+server/scripts/          get_models.py, gen_certs.py
 server/tests/            tests pytest
-server/models/           modèles ONNX YuNet/SFace (téléchargés, ignorés par git)
+server/models/           modèles ONNX (téléchargés, ignorés par git)
 data/                    faces/, snapshots/, sentinel.db (ignoré par git — photos de personnes)
 ```
 
@@ -112,47 +114,52 @@ def decide(state: State, face: Face | None, distance_cm: float, armed: bool, now
     return Command("red", fire=fire, text="ACCES REFUSE")
 ```
 
-Firmware : un `main.cpp` par nœud, broches en `constexpr` en tête de fichier, secrets dans `include/secrets.h` (non commité, copie de `secrets.h.example`).
+Firmware : un seul `.ino`, broches en `const int` en tête de fichier, secrets dans `secrets.h` (non commité, copie de `secrets.h.example`).
 
 ## Tests
 
-- **pytest** sur `guard.decide` : toutes les règles de tir (pas armé, trop loin, autorisé, délai, perte de visage). Obligatoire, c'est la logique de sécurité.
+- **pytest** sur `guard.decide` : toutes les règles de tir (pas armé, trop loin, connu, délai, perte de visage). Obligatoire, c'est la logique de sécurité.
 - `face-id` : vérification manuelle (chaque membre reconnu, un inconnu rejeté).
 - Firmware : checklist manuelle sur breadboard (chaque actionneur répond à son message MQTT).
 - Pas d'objectif de couverture (voir CONSTRAINTS.md).
 
-## Câblage (à confirmer sur breadboard)
+## Câblage (un seul ESP)
 
-Alimentation des deux ESP : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB), masse sur **G**.
+Alimentation : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB), masse sur **G**. Ligne + = côté trait rouge, ligne − = côté trait bleu.
 
-**panel (ESP n°1)** — 2 broches, câblé et testé le 2026-10-06 :
-- LED rouge : D0 → patte longue, patte courte → 330 Ω → GND.
-- LED verte : D8 → patte longue, patte courte → 330 Ω → GND.
+| Broche | Composant | État |
+|---|---|---|
+| D0 | LED rouge (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
+| D8 | LED verte (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
+| D3 | HC-SR04 TRIG | à faire |
+| D1 | HC-SR04 ECHO, via pont diviseur (10K en haut, 2 × 10K en série en bas ≈ 3,3V) | à faire |
+| D2 | Servo SG90 (signal) ; + sur la ligne +, − sur la ligne − | à faire |
+| D5, D6, D7, RX | ULN2003 IN1–IN4 pour le stepper | plus tard |
+| D4 | libre | — |
 
-**turret (ESP n°2)** — 7 broches :
-- HC-SR04 : TRIG direct ; ECHO sort en 5V → pont diviseur (10K en haut, 2 × 10K en série en bas ≈ 3,3V) avant l'ESP.
-- Servo SG90 : signal + 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB) + GND.
-- Stepper 28BYJ-48 via carte **ULN2003** (IN1–IN4) : 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB). Si l'ESP redémarre quand un moteur bouge → condensateur 470 µF ou alim 5V séparée, masse commune.
+Le servo n'est **jamais** sur D4 : cette broche envoie des impulsions au démarrage, qui pourraient déclencher l'arbalète.
+
+Courant : un port USB donne 500–900 mA. Le firmware coupe le stepper pendant un tir et à l'arrêt ; si l'ESP redémarre quand un moteur bouge → condensateur 470 µF entre + et −, ou chargeur USB séparé pour les moteurs (masse commune).
 
 ## Limites
 
-- **Toujours** : démarrer désarmé ; secrets dans `.env` / `secrets.h` ; tester `guard.decide` avant chaque commit ; n'enrôler que des personnes d'accord.
+- **Toujours** : démarrer désarmé ; secrets dans `.env` / `secrets.h` ; tester `guard.decide` avant chaque commit ; n'enrôler que des personnes d'accord ; un schéma clair pour chaque branchement.
 - **Demander d'abord** : nouvelle dépendance ; changement du contrat MQTT ; changement du brochage.
-- **Jamais** : de laser ; viser la tête ; tirer hors des 4 règles ci-dessus ; commiter photos, captures, certificats ou base SQLite.
+- **Jamais** : de laser ; viser la tête ; tirer hors des 4 règles ci-dessus ; servo sur D4 ; commiter photos, captures, certificats ou base SQLite.
 
 ## Critères de réussite
 
-1. Un membre enrôlé devant la C270 → LED verte + son nom sur le dashboard en < 2 s.
+1. Un membre enrôlé devant la C270 → LED verte + « Bienvenue <nom> » sur le dashboard en < 2 s.
 2. Un inconnu → LED rouge + alarme en < 2 s, capture visible sur le dashboard.
-3. Inconnu + < 50 cm + armé → un seul tir ; désarmé ou autorisé → aucun tir.
-4. Lien coupé → le panel passe en `idle`, la turret ne tire pas.
+3. Inconnu + < 50 cm + armé → un seul tir ; désarmé ou connu → aucun tir.
+4. Lien coupé → l'ESP éteint ses LED et ne tire pas.
 5. `mosquitto_sub` sans certificat ne peut pas se connecter (lien chiffré prouvé).
-6. Le dashboard liste chaque passage (capture, nom/inconnu, heure) et l'historique survit à un redémarrage.
+6. Le dashboard affiche la caméra en direct, la distance, l'état de l'ESP et l'historique des passages, qui survit à un redémarrage.
 7. `pytest`, `ruff`, `gitleaks` passent.
 
 ## Questions ouvertes
 
-1. **Carte ULN2003** : à trouver par l'équipe ; sans elle, la caméra reste fixe (T14 abandonnée).
-2. **Python 3.14** : si `opencv-python` n'a pas encore de wheel, venv en Python 3.12.
+1. **Dépôt GitHub** : à créer par l'équipe ; bloque l'installation du code sur le PC serveur.
+2. **Carte ULN2003** : à trouver ; sans elle, la caméra reste fixe.
 
-Tranché le 2026-10-06 : pas de capteurs DHT22/MQ-2/PIR ni d'IA prédictive (accord du prof) ; deux ESP8266 ; pas d'écran sur la porte, les messages s'affichent sur le dashboard (LCD abandonné, câblage trop instable) ; pas de buzzer, alarme sur le PC ; stepper = balayage gauche ↔ droite ; pièces 3D gérées par l'équipe ; seuil 50 cm.
+Tranché le 2026-10-06 : pas de capteurs DHT22/MQ-2/PIR ni d'IA prédictive (accord du prof) ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer, alarme sur le PC ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; seuil 50 cm ; Python 3.14 + OpenCV 5.0 fonctionnent.
