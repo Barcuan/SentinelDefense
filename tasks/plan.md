@@ -40,7 +40,7 @@ T3 guard + tests ─────────────────────
 ### Phase 1 : Fondations (mardi soir)
 - [x] T1 : Environnement Python + OpenCV YuNet qui tourne
 - [ ] T2 : Dépôt GitHub partagé + PC serveur prêt (code, venv, C270)
-- [ ] T3 : `guard.decide` + tests des règles de tir
+- [x] T3 : `guard.decide` + tests des règles de tir
 - [ ] T4 : face-id — enrôlement + reconnaissance en direct
 - [ ] T5 : Broker Mosquitto TLS + client Python
 

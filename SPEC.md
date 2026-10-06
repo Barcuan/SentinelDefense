@@ -49,7 +49,7 @@ Changer ce contrat = **demander à l'équipe**.
 | État | Entrée | LED / alarme / dashboard |
 |---|---|---|
 | `idle` | aucun visage depuis 3 s | LED éteintes |
-| `green` | visage connu (score SFace ≥ 0.363) | vert, « Bienvenue <nom> », 5 s |
+| `green` | visage connu (score SFace ≥ 0.363) | vert, « Bienvenue <nom> » (gardé 3 s après la disparition du visage) |
 | `red` | visage inconnu | rouge + alarme PC, « ACCES REFUSE », capture enregistrée |
 
 Règles de tir (toutes nécessaires) :
@@ -104,8 +104,8 @@ data/                    faces/, snapshots/, sentinel.db (ignoré par git — ph
 Python : fonctions simples, types annotés, logique pure séparée du matériel (testable sans caméra ni MQTT).
 
 ```python
-def decide(state: State, face: Face | None, distance_cm: float, armed: bool, now: float) -> Command:
-    """Pure: pas d'I/O, testé dans tests/test_guard.py."""
+def decide(state: State, face: Face | None, distance_cm: float | None, armed: bool, now: float) -> tuple[State, Command]:
+    """Pure : pas d'I/O, testé dans tests/test_guard.py. Renvoie le nouvel état et la commande."""
     if face is None:
         return Command("idle") if now - state.last_face_at > 3 else state.command
     if face.authorized:

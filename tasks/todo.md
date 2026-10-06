@@ -28,11 +28,11 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 **Fichiers :** `README.md` (installation), `server/sentinel/face_id.py`
 **Taille :** S
 
-### T3 : `guard.decide` + tests
+### T3 : `guard.decide` + tests ✅
 **Description :** Machine d'états pure (idle/green/red) et les 4 règles de tir de la spec.
 **Critères :**
-- [ ] Tests : connu → jamais de tir ; inconnu désarmé → pas de tir ; inconnu armé loin → pas de tir ; inconnu armé proche → 1 tir puis délai de 10 s ; plus de visage depuis 3 s → idle
-- [ ] Aucun import matériel/réseau dans `guard.py`
+- [x] Tests : connu → jamais de tir ; inconnu désarmé → pas de tir ; inconnu armé loin → pas de tir ; inconnu armé proche → 1 tir puis délai de 10 s ; plus de visage depuis 3 s → idle
+- [x] Aucun import matériel/réseau dans `guard.py`
 **Vérification :** `pytest`.
 **Dépend de :** —
 **Fichiers :** `server/sentinel/guard.py`, `server/tests/test_guard.py`
