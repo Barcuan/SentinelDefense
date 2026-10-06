@@ -36,12 +36,12 @@ Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémité
 - [ ] Checklist d'essai réel écrite dans le README
 **Fichiers :** `firmware/door-node/door-node.ino`, `firmware/door-node/secrets.h.example`
 
-### T7 : Serveur ↔ ESP
+### T7 : Serveur ↔ ESP ✅ (essai réel : Mosquitto + faux ESP par TLS, ACL, hors ligne en < 6 s)
 **Description :** au démarrage, `sentinel.app` lance Mosquitto avec `link/mosquitto.conf`, se connecte en TLS, s'abonne à `climate` et `status`. La logique de la porte (`guard.decide`) tourne dans le thread caméra : publie `led` quand l'état change, `fire` à chaque tir. Armé/désarmé côté serveur (désarmé au démarrage).
 **Critères :**
-- [ ] Une mesure `climate` valide est enregistrée ; une mesure invalide est ignorée sans planter (testé)
-- [ ] `led` n'est publié que quand l'état change ; un tir = un message `fire` avec un numéro qui augmente (testé avec un faux client)
-- [ ] Sans Mosquitto installé, le dashboard démarre quand même et l'affiche clairement
+- [x] Une mesure `climate` valide est enregistrée ; une mesure invalide est ignorée sans planter (testé)
+- [x] `led` n'est publié que quand l'état change ; un tir = un message `fire` avec un numéro qui augmente (testé avec un faux client)
+- [x] Sans Mosquitto installé, le dashboard démarre quand même et l'affiche clairement
 **Fichiers :** `server/sentinel/mqtt.py`, `server/sentinel/door.py`, `server/sentinel/app.py`, tests
 
 ### ✅ Checkpoint A

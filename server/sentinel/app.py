@@ -1,4 +1,4 @@
-"""Dashboard Sentinel-X : caméra en direct et gestion des visages.
+"""Serveur Sentinel-X : caméra, logique de la porte, liaison chiffrée avec l'ESP et dashboard.
 
     python -m sentinel.app        (depuis le dossier server), puis ouvrir http://localhost:8000
 """
@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from sentinel import face_id
+from sentinel.door import Door, pick_face
 from sentinel.enroll import FACES_DIR, SHOT_EVERY_S, SHOTS, build_gallery
 from sentinel.face_id import (
     CAMERA,
@@ -31,6 +32,8 @@ from sentinel.face_id import (
     load_gallery,
     save_gallery,
 )
+from sentinel.guard import Face
+from sentinel.mqtt import Link
 
 STATIC = Path(__file__).parent / "static"
 # Le prénom devient un nom de dossier : lettres (accents compris), chiffres, espace, tiret. Jamais de / ni de ..
@@ -62,7 +65,8 @@ class Enrollment:
 class Camera:
     """Un seul thread lit la caméra et fait toute la vision : les modèles OpenCV ne se partagent pas entre threads."""
 
-    def __init__(self) -> None:
+    def __init__(self, door: Door) -> None:
+        self.door = door
         self.threshold = face_id.THRESHOLD
         self.gallery: Gallery = {}
         self.jpeg: bytes | None = None
@@ -117,6 +121,7 @@ class Camera:
 
         shown = frame.copy()
         faces = []
+        seen: list[Face] = []
         for row in rows:
             face = identify(recognizer.embed(frame, row), self.gallery, self.threshold)
             x, y, w, h = row[:4].astype(int)
@@ -124,6 +129,9 @@ class Camera:
             cv2.rectangle(shown, (x, y), (x + w, y + h), color, 2)
             cv2.putText(shown, face_id.label(face), (x, max(y - 8, 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
             faces.append({"name": face.name, "score": round(face.score, 3)})
+            seen.append(face)
+        # Pendant un enregistrement, la personne est encore « inconnue » : la porte l'ignore (pas de tir).
+        self.door.step(None if enrollment else pick_face(seen), time.monotonic())
         if enrollment and not enrollment.done:
             hint = f"Enregistrement de {enrollment.name} : {enrollment.taken}/{SHOTS}"
             cv2.putText(shown, hint, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
@@ -134,14 +142,17 @@ class Camera:
             self.jpeg = buf.tobytes()
 
 
-camera = Camera()
+link = Link()
+camera = Camera(Door(link))
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    link.start()
     camera.start()
     yield
     camera.stop()
+    link.stop()
 
 
 app = FastAPI(title="Sentinel-X", lifespan=lifespan)
@@ -177,6 +188,14 @@ def live() -> dict[str, Any]:
         "error": camera.error,
         "enrollment": {"name": enrollment.name, "taken": enrollment.taken, "total": SHOTS} if enrollment else None,
         "rebuilding": camera.rebuild_requested,
+        "door": {"state": camera.door.command.state, "text": camera.door.command.text, "armed": camera.door.armed},
+        "link": {
+            "status": link.status,
+            "connected": link.connected,
+            "esp_online": link.esp_online,
+            "climate": link.climate,
+            "climate_age": round(time.time() - link.climate_at) if link.climate_at else None,
+        },
     }
 
 
@@ -214,6 +233,16 @@ def delete_face(name: str) -> dict[str, str]:
     shutil.rmtree(folder)
     camera.rebuild_requested = True
     return {"status": "deleted"}
+
+
+class Arm(BaseModel):
+    armed: bool
+
+
+@app.post("/api/arm")
+def arm(body: Arm) -> dict[str, bool]:
+    camera.door.armed = body.armed
+    return {"armed": camera.door.armed}
 
 
 class Threshold(BaseModel):
