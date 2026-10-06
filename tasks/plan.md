@@ -24,7 +24,7 @@ Le cœur de la démo, dans l'ordre : **la caméra reconnaît → LED verte/rouge
 T2 dépôt + PC serveur ──┬── T5 broker TLS ── T6 ESP en TLS + LED ──┐
                         │                                          ├── T7 « lumière » ── T8 « capture » ── T11 dashboard v1 ── T12 dashboard v2
 T1 OpenCV ✅ ── T4 face-id ─────────────────────────────────────────┘                                          │
-T3 guard + tests ───────────────────────────────── T10 « tir » ── T9 temp/humidité ─────────────────────────────────┘
+T3 guard + tests ───────────────────────────────── T10 « tir » ── T9 capteurs ─────────────────────────────────┘
 ```
 
 ## Répartition suggérée
@@ -50,14 +50,14 @@ T3 guard + tests ─────────────────────
 - [ ] T6 : L'ESP se connecte en TLS et allume ses LED sur ordre MQTT
 - [ ] T7 : Tranche « lumière » — visage connu/inconnu → LED verte/rouge
 - [ ] T8 : Tranche « capture » — inconnu → alarme + capture + événement en base
-- [ ] T9 : Le capteur DHT publie température et humidité
+- [ ] T9 : Les capteurs publient température, humidité et gaz
 - [ ] T10 : Tranche « tir » — servo + règles de tir + failsafe
 
 **Checkpoint 2** : critères de réussite 1 à 5 démontrés sur breadboard.
 
 ### Phase 3 : Dashboard (mercredi après-midi)
 - [ ] T11 : Dashboard v1 — message, personne + capture, historique
-- [ ] T12 : Dashboard v2 — caméra en direct, température/humidité, état ESP, armer/désarmer
+- [ ] T12 : Dashboard v2 — caméra en direct, température/humidité/gaz, état ESP, armer/désarmer
 - [ ] T15 : Page « Visages » — enregistrer, supprimer et régler la reconnaissance depuis le dashboard
 
 **Checkpoint 3** : les 7 critères de réussite passent.

@@ -103,10 +103,10 @@ Code livré le 2026-10-06 : `python -m sentinel.enroll --capture <nom>` (10 phot
 **Fichiers :** `server/sentinel/store.py`, `server/sentinel/app.py`, `server/tests/test_store.py`
 **Taille :** M
 
-### T9 : Le capteur DHT publie température et humidité
-**Description :** Câblage du capteur DHT (données sur D1, alimentation sur la broche 3V de l'ESP) avec schéma ; le croquis publie `sentinel/door/climate` toutes les 2 s.
+### T9 : Les capteurs publient température, humidité et gaz
+**Description :** DHT11 sur D1 (câblé, testé) et capteur de gaz sur A0 via pont diviseur ; le croquis publie `sentinel/door/climate` (temp, hum, gas) toutes les 2 s.
 **Critères :**
-- [ ] Valeurs plausibles reçues sur le PC (souffler sur le capteur fait monter l'humidité)
+- [ ] Valeurs plausibles reçues sur le PC (souffler sur le DHT fait monter l'humidité ; gel hydroalcoolique près du capteur de gaz fait monter `gas`)
 - [ ] Une lecture ratée n'envoie rien plutôt qu'une valeur fausse
 **Vérification :** `mosquitto_sub -t sentinel/door/climate`.
 **Dépend de :** T6
@@ -143,8 +143,8 @@ Code livré le 2026-10-06 : `python -m sentinel.enroll --capture <nom>` (10 phot
 **Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
 **Taille :** M
 
-### T12 : Dashboard v2 — caméra, température/humidité, ESP, armer
-**Description :** Flux MJPEG de la C270 avec les cadres et noms ; température et humidité en direct avec une courbe ; ESP en ligne / hors ligne ; bouton armer/désarmer (désarmé au démarrage).
+### T12 : Dashboard v2 — caméra, capteurs, ESP, armer
+**Description :** Flux MJPEG de la C270 avec les cadres et noms ; température, humidité et gaz en direct avec des courbes ; ESP en ligne / hors ligne ; bouton armer/désarmer (désarmé au démarrage).
 **Critères :**
 - [ ] La caméra s'affiche en direct dans la page (critère 6)
 - [ ] Débrancher l'ESP → « hors ligne » en < 5 s

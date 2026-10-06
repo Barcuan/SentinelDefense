@@ -13,7 +13,7 @@ Une porte « gardée » pour la démo. La webcam C270 identifie la personne deva
 - **inconnue** → LED rouge + alarme sonore (haut-parleurs du PC) + « ACCES REFUSE » + capture d'écran ;
 - **inconnue pendant 3 s ET système armé** → le servo SG90 déclenche l'arbalète imprimée en 3D (projectile mousse/papier).
 
-Le dashboard remonte tout : ce que voit la caméra, la personne devant la porte (nom ou inconnu, capture), le message affiché, l'historique des passages, la température et l'humidité (capteur DHT sur l'ESP, avec courbe), l'état de l'ESP, et le bouton armer/désarmer.
+Le dashboard remonte tout : ce que voit la caméra, la personne devant la porte (nom ou inconnu, capture), le message affiché, l'historique des passages, la température, l'humidité et le niveau de gaz (capteurs DHT11 et MQ sur l'ESP, avec courbes), l'état de l'ESP, et le bouton armer/désarmer.
 
 Plus tard, si le temps le permet : le moteur 28BYJ-48 (via ULN2003) fait balayer la caméra de gauche à droite.
 
@@ -23,7 +23,7 @@ Plus tard, si le temps le permet : le moteur 28BYJ-48 (via ULN2003) fait balayer
 |---|---|---|---|
 | `link` | Broker MQTT TLS, certificats, contrat des messages | PC serveur | — |
 | `face-id` | C270 → détection + reconnaissance → `connu(nom)` / `inconnu` + capture | PC serveur | — |
-| `door-node` | L'unique ESP8266 : LED verte/rouge, capteur DHT (température/humidité), servo (stepper plus tard) | ESP8266 | `link` |
+| `door-node` | L'unique ESP8266 : LED verte/rouge, capteur DHT (température/humidité), capteur de gaz, servo (stepper plus tard) | ESP8266 | `link` |
 | `guard` | Machine d'états : visage + armé → commandes ; stockage des événements | PC serveur | `face-id`, `link` |
 | `dashboard` | Page web : caméra en direct, personne, message, historique, température/humidité, état ESP, armer/désarmer | PC serveur | `guard` |
 
@@ -38,7 +38,7 @@ Broker Mosquitto sur le PC serveur, **TLS port 8883**, CA auto-signée + utilisa
 | Topic | Sens | Payload |
 |---|---|---|
 | `sentinel/door/led` | PC → ESP | `{"state": "idle"\|"green"\|"red"}` |
-| `sentinel/door/climate` | ESP → PC | `{"temp": 22.5, "hum": 48.0}` toutes les 2 s |
+| `sentinel/door/climate` | ESP → PC | `{"temp": 22.5, "hum": 48.0, "gas": 312}` toutes les 2 s (`gas` : 0–1023, plus c'est haut, plus il y a de gaz) |
 | `sentinel/door/fire` | PC → ESP | `{"id": 17}` (un message = un tir ; `id` évite de tirer deux fois sur un renvoi) |
 | `sentinel/door/status` | ESP → PC | `{"online": true}` (retained + LWT `{"online": false}`) |
 
@@ -130,12 +130,13 @@ Alimentation : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas
 | D8 | LED verte (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
 | D1 | Capteur DHT11 (module KY-015 : S → D1, milieu → 3V de l'ESP, droite → ligne −) | câblé et testé le 2026-10-06 (27,6 °C lus) |
 | D2 | Servo SG90 (orange → D2, rouge → ligne +, marron → ligne −) | câblé et testé le 2026-10-06 |
+| A0 | Capteur de gaz « Flying Fish » (AO, via pont 10K → A0 → 2 × 10K → masse) ; VCC → ligne +, GND → ligne −, DO vide | à faire |
 | D5, D6, D7, RX | ULN2003 IN1–IN4 pour le stepper | plus tard |
 | D3, D4 | libres | — |
 
 Le servo n'est **jamais** sur D4 : cette broche envoie des impulsions au démarrage, qui pourraient déclencher l'arbalète.
 
-Courant : un port USB donne 500–900 mA. Le firmware coupe le stepper pendant un tir et à l'arrêt ; si l'ESP redémarre quand un moteur bouge → condensateur 470 µF entre + et −, ou chargeur USB séparé pour les moteurs (masse commune).
+Courant : un port USB donne 500–900 mA ; le capteur de gaz chauffe en permanence (~150 mA, il est chaud au toucher, c'est normal). Le firmware coupe le stepper pendant un tir et à l'arrêt ; si l'ESP redémarre quand un moteur bouge → condensateur 470 µF entre + et −, ou chargeur USB séparé pour les moteurs (masse commune).
 
 ## Limites
 
@@ -158,4 +159,4 @@ Courant : un port USB donne 500–900 mA. Le firmware coupe le stepper pendant u
 1. **Dépôt GitHub** : à créer par l'équipe ; bloque l'installation du code sur le PC serveur.
 2. **Carte ULN2003** : à trouver ; sans elle, la caméra reste fixe.
 
-Tranché le 2026-10-06 : kit capteurs du sujet non fourni, pas de MQ-2/PIR ni d'IA prédictive (accord du prof) ; le capteur température/humidité de l'équipe sert seulement à l'affichage ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer, alarme sur le PC ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; HC-SR04 abandonné au profit d'un capteur température/humidité, le tir part après 3 s de visage inconnu ; Python 3.14 + OpenCV 5.0 fonctionnent.
+Tranché le 2026-10-06 : kit capteurs du sujet non fourni, pas de PIR ni d'IA prédictive (accord du prof) ; les capteurs de l'équipe (DHT11 température/humidité, capteur de gaz « Flying Fish ») servent à l'affichage sur le dashboard ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer, alarme sur le PC ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; HC-SR04 abandonné au profit d'un capteur température/humidité, le tir part après 3 s de visage inconnu ; Python 3.14 + OpenCV 5.0 fonctionnent.
