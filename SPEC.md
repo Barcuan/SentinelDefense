@@ -33,14 +33,14 @@ Le PC serveur est le PC d'un coéquipier : c'est lui qui a des ports USB-A pour 
 
 ## Contrat MQTT (module `link`)
 
-Broker Mosquitto sur le PC serveur, **TLS port 8883**, CA auto-signée + utilisateur/mot de passe. JSON UTF-8.
+Broker Mosquitto sur le PC serveur, **TLS 1.2 port 8883**, CA auto-signée (EC P-256) + mot de passe par compte (`server`, `esp`) + ACL : l'ESP ne peut lire que `led`/`fire` et écrire que `climate`/`status`. Tout est généré par `python -m sentinel.setup`. Ordres vers l'ESP en texte simple (pas de bibliothèque JSON sur l'ESP), mesures de l'ESP en JSON.
 
 | Topic | Sens | Payload |
 |---|---|---|
-| `sentinel/door/led` | PC → ESP | `{"state": "idle"\|"green"\|"red"}` |
+| `sentinel/door/led` | PC → ESP | texte : `green`, `red` ou `idle` (retained : l'ESP retrouve l'état après un redémarrage) |
 | `sentinel/door/climate` | ESP → PC | `{"temp": 22.5, "hum": 48.0, "gas": 312}` toutes les 2 s (`gas` : 0–1023, plus c'est haut, plus il y a de gaz) |
-| `sentinel/door/fire` | PC → ESP | `{"id": 17}` (un message = un tir ; `id` évite de tirer deux fois sur un renvoi) |
-| `sentinel/door/status` | ESP → PC | `{"online": true}` (retained + LWT `{"online": false}`) |
+| `sentinel/door/fire` | PC → ESP | texte : numéro du tir, ex. `17` (un message = un tir ; un numéro déjà vu est ignoré) |
+| `sentinel/door/status` | ESP → PC | `online` / `offline` (retained + LWT `offline`) |
 
 Changer ce contrat = **demander à l'équipe**.
 

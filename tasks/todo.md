@@ -20,12 +20,12 @@ Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémité
 
 ## Phase A : relier l'ESP au PC
 
-### T5 : Liaison chiffrée générée en une commande
+### T5 : Liaison chiffrée générée en une commande ✅
 **Description :** `python -m sentinel.setup` demande le nom et le mot de passe du Wi-Fi, puis génère dans `link/` (ignoré par git) : une CA et un certificat broker EC P-256 (valables pour `192.168.137.1` et `localhost`), `mosquitto.conf` (8883, TLS, pas d'anonyme), le fichier de mots de passe (un compte serveur, un compte ESP) ; dans `.env` les mots de passe ; dans `firmware/door-node/secrets.h` le Wi-Fi, l'adresse du broker, le compte ESP, la CA et l'heure de génération.
 **Critères :**
-- [ ] Le certificat broker est signé par la CA et valable pour 192.168.137.1 et localhost (testé)
-- [ ] `secrets.h` contient tout ce dont le firmware a besoin, et rien n'est ajouté à git (testé)
-- [ ] Relancer `setup` ne casse pas une installation existante (garde les fichiers sauf `--force`)
+- [x] Le certificat broker est signé par la CA et valable pour 192.168.137.1 et localhost (testé)
+- [x] `secrets.h` contient tout ce dont le firmware a besoin, et rien n'est ajouté à git (testé)
+- [x] Relancer `setup` ne casse pas une installation existante (garde les fichiers sauf `--force`)
 **Fichiers :** `server/sentinel/setup.py`, `server/tests/test_setup.py`, `.gitignore`
 
 ### T6 : Firmware définitif `door-node.ino`
