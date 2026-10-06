@@ -104,7 +104,7 @@ Code livré le 2026-10-06 : `python -m sentinel.enroll --capture <nom>` (10 phot
 **Taille :** M
 
 ### T9 : Les capteurs publient température, humidité et gaz
-**Description :** DHT11 sur D1 (câblé, testé) et capteur de gaz sur A0 via pont diviseur ; le croquis publie `sentinel/door/climate` (temp, hum, gas) toutes les 2 s.
+**Description :** DHT11 sur D1 (câblé, testé) et capteur de gaz sur A0 (AO → 2 × 100K → A0) ; le croquis publie `sentinel/door/climate` (temp, hum, gas) toutes les 2 s.
 **Critères :**
 - [ ] Valeurs plausibles reçues sur le PC (souffler sur le DHT fait monter l'humidité ; gel hydroalcoolique près du capteur de gaz fait monter `gas`)
 - [ ] Une lecture ratée n'envoie rien plutôt qu'une valeur fausse

@@ -130,7 +130,7 @@ Alimentation : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas
 | D8 | LED verte (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
 | D1 | Capteur DHT11 (module KY-015 : S → D1, milieu → 3V de l'ESP, droite → ligne −) | câblé et testé le 2026-10-06 (27,6 °C lus) |
 | D2 | Servo SG90 (orange → D2, rouge → ligne +, marron → ligne −) | câblé et testé le 2026-10-06 |
-| A0 | Capteur de gaz « Flying Fish » (AO, via pont 10K → A0 → 2 × 10K → masse) ; VCC → ligne +, GND → ligne −, DO vide | à faire |
+| A0 | Capteur de gaz « Flying Fish » : AO → 2 × 100K en série → A0 (la broche A0 de la carte a déjà son pont interne 220K/100K, entrée max 3,3V) ; VCC → ligne +, GND → ligne −, DO vide | à faire |
 | D5, D6, D7, RX | ULN2003 IN1–IN4 pour le stepper | plus tard |
 | D3, D4 | libres | — |
 
