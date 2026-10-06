@@ -129,7 +129,7 @@ Alimentation : 5V sur la broche **VU** (sur ces cartes LoLin V3, VIN ne sort pas
 | D0 | LED rouge (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
 | D8 | LED verte (330 Ω vers la masse) | câblé et testé le 2026-10-06 |
 | D1 | Capteur DHT11 (module KY-015 : S → D1, milieu → 3V de l'ESP, droite → ligne −) | câblé et testé le 2026-10-06 (27,6 °C lus) |
-| D2 | Servo SG90 (signal) ; + sur la ligne +, − sur la ligne − | à faire |
+| D2 | Servo SG90 (orange → D2, rouge → ligne +, marron → ligne −) | câblé et testé le 2026-10-06 |
 | D5, D6, D7, RX | ULN2003 IN1–IN4 pour le stepper | plus tard |
 | D3, D4 | libres | — |
 
