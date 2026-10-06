@@ -58,7 +58,7 @@ T3 guard + tests ─────────────────────
 ### Phase 3 : Dashboard (mercredi après-midi)
 - [ ] T11 : Dashboard v1 — message, personne + capture, historique
 - [ ] T12 : Dashboard v2 — caméra en direct, température/humidité/gaz, état ESP, armer/désarmer
-- [ ] T15 : Page « Visages » — enregistrer, supprimer et régler la reconnaissance depuis le dashboard
+- [ ] T15 : Page « Visages » — enregistrer, supprimer et régler la reconnaissance depuis le dashboard (code fait le 2026-10-06, à vérifier devant la C270)
 
 **Checkpoint 3** : les 7 critères de réussite passent.
 

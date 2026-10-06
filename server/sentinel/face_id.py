@@ -73,7 +73,9 @@ def load_gallery(path: Path = GALLERY) -> Gallery:
 
 
 def label(face: Face) -> str:
-    return f"{face.name} ({face.score:.2f})" if face.name else f"inconnu ({face.score:.2f})"
+    if face.name:
+        return f"{face.name} ({face.score:.2f})"
+    return f"inconnu ({face.score:.2f})" if face.score >= 0 else "inconnu"  # -1 = aucun visage enregistré
 
 
 def preview(camera: int = CAMERA) -> None:

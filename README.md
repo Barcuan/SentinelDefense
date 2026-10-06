@@ -20,32 +20,34 @@ pytest
 
 `get_models.py` télécharge les deux modèles de reconnaissance (environ 38 Mo). Ils ne sont pas dans le dépôt.
 
-## Enregistrer les visages autorisés
+## Lancer le dashboard
 
-Depuis le dossier `server`, chaque membre se met face à la caméra et lance, avec son prénom :
+Depuis le dossier `server` :
 
 ```powershell
 cd server
-python -m sentinel.enroll --capture Sacha
+python -m sentinel.app
 ```
 
-Le programme prend 10 photos (bougez un peu la tête entre deux photos), puis apprend le visage. Échap pour arrêter avant la fin.
+Puis ouvrez **http://localhost:8000** dans le navigateur du même PC. On y trouve :
 
-Pour vérifier la reconnaissance en direct (cadre vert + prénom, ou rouge + « inconnu ») :
+- la caméra en direct : cadre vert + prénom si le visage est connu, rouge + « inconnu » sinon ;
+- **Enregistrer un visage** : tapez un prénom, cliquez sur Enregistrer, restez seul face à la caméra et bougez un peu la tête. 10 photos sont prises, puis le visage est appris ;
+- **Visages enregistrés** : la liste, avec un bouton pour supprimer quelqu'un ;
+- **Réglage de la reconnaissance** : le curseur du seuil. Montez-le si un inconnu est pris pour un membre, baissez-le si un membre reste « inconnu ». Le score de la personne devant la caméra s'affiche en direct à côté.
 
-```powershell
-python sentinel/face_id.py
-```
+Ctrl+C dans le terminal pour arrêter. Le dashboard n'est accessible que depuis ce PC.
 
-Si c'est la webcam intégrée du PC qui s'allume au lieu de la C270, choisissez la caméra 1 :
+Si c'est la webcam intégrée du PC qui s'affiche au lieu de la C270, arrêtez, puis relancez avec la caméra 1 :
 
 ```powershell
 $env:SENTINEL_CAMERA=1
+python -m sentinel.app
 ```
 
-Le seuil de reconnaissance se règle de la même façon : `$env:SENTINEL_THRESHOLD=0.4` rend la reconnaissance plus stricte, une valeur plus basse la rend plus tolérante.
-
 Les photos et les empreintes des visages restent dans `data/`, qui n'est **jamais** envoyé sur GitHub.
+
+Sans dashboard, en ligne de commande : `python -m sentinel.enroll --capture Sacha` pour enregistrer, `python sentinel/face_id.py` pour l'aperçu.
 
 ## L'ESP8266
 

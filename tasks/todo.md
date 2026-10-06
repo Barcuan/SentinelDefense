@@ -154,7 +154,8 @@ Code livré le 2026-10-06 : `python -m sentinel.enroll --capture <nom>` (10 phot
 **Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
 **Taille :** M
 
-### T15 : Enregistrer et régler les visages depuis le dashboard
+### T15 : Enregistrer et régler les visages depuis le dashboard (code fait, à vérifier devant la C270)
+Livré le 2026-10-06, avancé avant T5 à la demande de l'équipe : `python -m sentinel.app`, http://localhost:8000. Caméra en direct (MJPEG) + noms, enregistrement 10 photos, suppression, curseur du seuil avec score en direct. Le flux caméra de T12 est donc déjà fait.
 **Description :** Page « Visages » du dashboard : liste des personnes enregistrées (nombre de photos), champ prénom + bouton « Enregistrer ce visage » qui prend 10 photos à la C270 et recalcule, bouton supprimer, réglage du seuil avec le score en direct de la personne devant la caméra. Réutilise `enroll.build_gallery` et `face_id.identify`.
 **Critères :**
 - [ ] Un nouveau membre enregistré depuis la page est reconnu sans redémarrer le serveur
