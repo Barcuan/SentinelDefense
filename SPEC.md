@@ -125,7 +125,7 @@ Firmware : un `main.cpp` par nœud, broches en `constexpr` en tête de fichier, 
 
 **panel (ESP n°1)** — 8 broches :
 - LCD 1602 en mode 4 bits : RS, E, D4, D5, D6, D7 → 6 broches ; RW → GND ; VDD → 5V (broche VU : sur ces cartes LoLin V3, VIN ne sort pas le 5V de l'USB) ; VSS → GND.
-- Contraste VO : vers GND à travers ~1 kΩ (3 × 330 Ω en série), à ajuster si l'écran est vide ou tout noir.
+- Contraste VO : directement à GND (contraste maximum). Si les caractères sont illisibles car trop sombres : pont diviseur 10K vers 5V / 3 × 330 Ω vers GND (≈ 0,45V sur VO).
 - Rétroéclairage : A → 5V via 330 Ω, K → GND.
 - LED verte et rouge : une résistance **330 Ω** en série chacune.
 
