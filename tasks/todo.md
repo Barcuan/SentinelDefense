@@ -22,7 +22,7 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 **Critères :**
 - [ ] Le dépôt contient le code, sans modèle, photo ni secret
 - [ ] Sur le PC serveur : `pytest` passe et l'aperçu `face_id.py` montre l'image de la C270 avec un cadre sur le visage
-- [ ] L'index de la C270 est réglable sans toucher au code (si la webcam intégrée est la caméra 0)
+- [x] L'index de la C270 est réglable sans toucher au code : `SENTINEL_CAMERA=1` (fait avec T4)
 **Vérification :** aperçu lancé sur le PC serveur ; `gitleaks detect --redact --no-banner`.
 **Dépend de :** T1 ; lien du dépôt fourni par l'équipe
 **Fichiers :** `README.md` (installation), `server/sentinel/face_id.py`
@@ -38,12 +38,13 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 **Fichiers :** `server/sentinel/guard.py`, `server/tests/test_guard.py`
 **Taille :** S
 
-### T4 : face-id — enrôlement + reconnaissance
+### T4 : face-id — enrôlement + reconnaissance (code fait, à vérifier devant la C270)
 **Description :** `enroll` calcule les empreintes SFace de `data/faces/<nom>/*.jpg` ; la boucle live renvoie `Face(name, authorized, score)` + image ; l'aperçu affiche le nom ou « inconnu ».
+Code livré le 2026-10-06 : `python -m sentinel.enroll --capture <nom>` (10 photos à la webcam), `python -m sentinel.enroll` (recalcul), aperçu `python sentinel/face_id.py` avec nom + score. Caméra : `SENTINEL_CAMERA`, seuil : `SENTINEL_THRESHOLD`.
 **Critères :**
 - [ ] Chaque membre enrôlé est reconnu (score ≥ 0.363) sous l'éclairage de la salle
 - [ ] Une personne non enrôlée → « inconnu »
-- [ ] Seuil réglable sans toucher au code
+- [x] Seuil réglable sans toucher au code
 **Vérification :** démo à 3 + 1 inconnu devant la C270.
 **Dépend de :** T1 (T2 pour le test avec la C270)
 **Fichiers :** `server/sentinel/face_id.py`, `server/sentinel/enroll.py`, `server/tests/test_face_id.py`
@@ -150,6 +151,17 @@ Fait le 2026-10-06 (commit `37310f4`) : Python 3.14 + OpenCV 5.0, détection en 
 - [ ] Le bouton armer/désarmer change réellement le comportement de T10 ; au redémarrage : désarmé
 **Vérification :** démo navigateur.
 **Dépend de :** T10, T11
+**Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
+**Taille :** M
+
+### T15 : Enregistrer et régler les visages depuis le dashboard
+**Description :** Page « Visages » du dashboard : liste des personnes enregistrées (nombre de photos), champ prénom + bouton « Enregistrer ce visage » qui prend 10 photos à la C270 et recalcule, bouton supprimer, réglage du seuil avec le score en direct de la personne devant la caméra. Réutilise `enroll.build_gallery` et `face_id.identify`.
+**Critères :**
+- [ ] Un nouveau membre enregistré depuis la page est reconnu sans redémarrer le serveur
+- [ ] Changer le seuil change immédiatement le verdict connu/inconnu affiché
+- [ ] Supprimer une personne la rend « inconnue »
+**Vérification :** démo navigateur devant la C270.
+**Dépend de :** T4, T12
 **Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
 **Taille :** M
 

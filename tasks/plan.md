@@ -33,7 +33,7 @@ T3 guard + tests ─────────────────────
 |---|---|
 | Vision | T4, puis T8 (capture) |
 | Matériel + firmware | T6, T9, T10 (câblage + croquis) |
-| Serveur | T2, T5, T3, T7, T11, T12 |
+| Serveur | T2, T5, T3, T7, T11, T12, T15 |
 
 ## Liste des tâches
 
@@ -41,7 +41,7 @@ T3 guard + tests ─────────────────────
 - [x] T1 : Environnement Python + OpenCV YuNet qui tourne
 - [ ] T2 : Dépôt GitHub partagé + PC serveur prêt (code, venv, C270)
 - [x] T3 : `guard.decide` + tests des règles de tir
-- [ ] T4 : face-id — enrôlement + reconnaissance en direct
+- [ ] T4 : face-id — enrôlement + reconnaissance en direct (code fait, à vérifier devant la C270)
 - [ ] T5 : Broker Mosquitto TLS + client Python
 
 **Checkpoint 1** : sur le PC serveur, la C270 reconnaît les 3 membres ; pytest vert ; un client sans certificat est refusé par le broker.
@@ -58,6 +58,7 @@ T3 guard + tests ─────────────────────
 ### Phase 3 : Dashboard (mercredi après-midi)
 - [ ] T11 : Dashboard v1 — message, personne + capture, historique
 - [ ] T12 : Dashboard v2 — caméra en direct, température/humidité, état ESP, armer/désarmer
+- [ ] T15 : Page « Visages » — enregistrer, supprimer et régler la reconnaissance depuis le dashboard
 
 **Checkpoint 3** : les 7 critères de réussite passent.
 
