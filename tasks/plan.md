@@ -38,7 +38,7 @@ T12 pièces 3D (équipe, hors code) ── montage final de T8
 ## Liste des tâches
 
 ### Phase 1 : Fondations (mardi)
-- [ ] T1 : Environnement Python + OpenCV YuNet/SFace qui tourne
+- [x] T1 : Environnement Python + OpenCV YuNet/SFace qui tourne
 - [ ] T2 : Broker Mosquitto TLS + client Python
 - [ ] T3 : panel se connecte au broker en TLS
 - [ ] T5 : `guard.decide` + tests des règles de tir

@@ -1,0 +1,7 @@
+opencv-python==5.0.0.93
+numpy==2.5.3
+
+# dev
+pytest==9.1.1
+ruff==0.16.10
+mypy==2.4.0

@@ -12,9 +12,9 @@ Commandes de vérification communes :
 ### T1 : Environnement Python + OpenCV YuNet/SFace
 **Description :** Venv, dépendances, téléchargement des modèles ONNX, script qui ouvre la C270 et encadre les visages. Lève le risque « pas de wheel pour 3.14 ». Installe aussi ruff/mypy (CONSTRAINTS).
 **Critères :**
-- [ ] `pip install -r server/requirements.txt` passe (Python 3.14, sinon 3.12)
-- [ ] La C270 s'affiche avec un cadre sur chaque visage détecté
-- [ ] `server/models/` et `data/` ignorés par git
+- [x] `pip install -r server/requirements.txt` passe (Python 3.14, sinon 3.12)
+- [x] La C270 s'affiche avec un cadre sur chaque visage détecté
+- [x] `server/models/` et `data/` ignorés par git
 **Vérification :** lancer le script, montrer 1 puis 2 visages ; `git status` ne montre ni modèle ni photo.
 **Dépend de :** —
 **Fichiers :** `server/requirements.txt`, `server/sentinel/face_id.py`, `server/scripts/get_models.py`, `.gitignore`

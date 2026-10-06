@@ -21,3 +21,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Sentinel-X : modèles téléchargés, photos et captures de personnes, certificats
+server/models/
+data/
+link/certs/
+firmware/*/include/secrets.h
+.pio/
