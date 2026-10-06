@@ -48,7 +48,7 @@ T7 ── T8 historique + captures + alarme ── T11 dashboard Surveillance + 
 
 ### Phase B : tout afficher
 - [x] T8 : Historique des passages (SQLite), captures des inconnus, alarme sonore
-- [ ] T11 : Dashboard en onglets — Surveillance (verdict, armer, historique) et Capteurs (courbes, état ESP)
+- [x] T11 : Dashboard en onglets — Surveillance (verdict, armer, historique) et Capteurs (courbes, état ESP)
 
 ### Phase C : installer et lancer en une commande
 - [ ] T13 : `install.bat`, `start.bat`, README en 3 étapes ; vérifications finales

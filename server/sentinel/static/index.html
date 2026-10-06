@@ -8,30 +8,63 @@
 :root {
   --bg: #eef1ef; --panel: #ffffff; --ink: #18201c; --muted: #5f6b65; --line: #d5dcd8;
   --accent: #0f6e56; --ok: #2f8a3e; --ok-bg: #e3f3e5; --bad: #c4352f; --bad-bg: #fbe7e6;
-  --warn-bg: #fdf3e2; --warn: #7a4a08;
+  --idle-bg: #e9edeb; --warn-bg: #fdf3e2; --warn: #7a4a08;
+  --c-temp: #d0602a; --c-hum: #2f7fd1; --c-gas: #7a5bc7;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root {
   --bg: #121715; --panel: #1b2220; --ink: #e5ebe8; --muted: #9aa7a1; --line: #2f3a36;
   --accent: #5dcaa5; --ok: #6fcf7c; --ok-bg: #173320; --bad: #f07a73; --bad-bg: #3a1c1a;
-  --warn-bg: #3a2a12; --warn: #f3c98a; color-scheme: dark;
+  --idle-bg: #232c29; --warn-bg: #3a2a12; --warn: #f3c98a;
+  --c-temp: #f08a55; --c-hum: #6aaef0; --c-gas: #a98cf0; color-scheme: dark;
 } }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); padding: 20px 16px 40px; }
-header { max-width: 1200px; margin: 0 auto 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-h1 { font-size: 22px; margin: 0; letter-spacing: .02em; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); padding: 16px 16px 40px; }
+header { max-width: 1240px; margin: 0 auto 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+h1 { font-size: 22px; margin: 0 8px 0 0; letter-spacing: .02em; }
 h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
-.pill { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--ok-bg); color: var(--ok); }
-.pill.bad { background: var(--bad-bg); color: var(--bad); }
-main { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); }
-@media (max-width: 820px) { main { grid-template-columns: minmax(0, 1fr); } }
+nav { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+nav button { background: transparent; color: var(--ink); border: 0; padding: 6px 14px; font-weight: 600; border-radius: 7px; }
+nav button[aria-selected="true"] { background: var(--accent); color: var(--panel); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.chip { font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--ok-bg); color: var(--ok); }
+.chip.bad { background: var(--bad-bg); color: var(--bad); }
+.chip.off { background: var(--idle-bg); color: var(--muted); }
+main { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); }
+main.wide { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
 .col { display: grid; gap: 16px; align-content: start; min-width: 0; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
-.video { padding: 0; overflow: hidden; background: #000; aspect-ratio: 4 / 3; display: grid; place-items: center; }
+.video { padding: 0; overflow: hidden; background: #000; aspect-ratio: 4 / 3; }
 .video img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.video .msg { color: #ccc; padding: 16px; text-align: center; }
 .meta { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+.verdict { border-radius: 10px; padding: 22px 18px; text-align: center; font-size: clamp(22px, 3vw, 30px); font-weight: 700; letter-spacing: .02em; background: var(--idle-bg); color: var(--muted); }
+.verdict.green { background: var(--ok-bg); color: var(--ok); }
+.verdict.red { background: var(--bad-bg); color: var(--bad); }
+.arm { display: grid; gap: 8px; }
+.arm button { padding: 14px; font-size: 17px; }
+.arm button.armed { background: var(--bad); border-color: var(--bad); }
+.arm p { margin: 0; color: var(--muted); font-size: 13px; }
+.passage { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.passage:first-child { border-top: 0; }
+.thumb { width: 64px; height: 48px; border-radius: 6px; background: var(--idle-bg); object-fit: cover; display: block; }
+.passage .who { font-weight: 600; } .passage .who.bad { color: var(--bad); } .passage .who.ok { color: var(--ok); }
+.passage small { color: var(--muted); display: block; font-family: var(--mono); font-size: 12px; }
+.tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bad); color: var(--panel); }
+.history { max-height: 460px; overflow-y: auto; }
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.tile .label { color: var(--muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.tile .value { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile .unit { font-size: 16px; color: var(--muted); margin-left: 4px; font-weight: 600; }
+.chart { width: 100%; height: 190px; display: block; }
+.range { display: flex; gap: 6px; }
+.range button { background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 4px 10px; font-size: 13px; }
+.range button[aria-pressed="true"] { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.rowhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.rowhead h2 { margin: 0; }
 .face { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--line); }
 .face:first-of-type { border-top: 0; }
 .face-top { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
@@ -39,7 +72,7 @@ main { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; grid-templat
 .bar { position: relative; height: 8px; border-radius: 4px; background: var(--line); }
 .bar span { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
 .bar i { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
-.empty { color: var(--muted); }
+.empty { color: var(--muted); margin: 0; }
 label { font-weight: 600; display: block; margin-bottom: 6px; }
 input[type=text] { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
 input[type=range] { width: 100%; accent-color: var(--accent); }
@@ -57,49 +90,90 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .person small { color: var(--muted); font-weight: 400; }
 .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
 .tv { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) { .verdict { transition: background .2s, color .2s; } }
 </style>
 </head>
 <body>
 <header>
   <h1>Sentinel-X</h1>
-  <span class="pill" id="cam-status">caméra…</span>
-  <span class="meta" id="perf"></span>
+  <nav role="tablist" aria-label="Onglets du dashboard">
+    <button role="tab" id="tab-surveillance" aria-controls="panel-surveillance" aria-selected="true" data-tab="surveillance">Surveillance</button>
+    <button role="tab" id="tab-capteurs" aria-controls="panel-capteurs" aria-selected="false" data-tab="capteurs">Capteurs</button>
+    <button role="tab" id="tab-visages" aria-controls="panel-visages" aria-selected="false" data-tab="visages">Visages</button>
+  </nav>
+  <div class="chips" aria-live="polite">
+    <span class="chip off" id="chip-camera">caméra…</span>
+    <span class="chip off" id="chip-link">liaison…</span>
+    <span class="chip off" id="chip-esp">ESP…</span>
+  </div>
 </header>
 
-<main>
-  <div class="col">
-    <div class="card video" id="video">
-      <img src="/video" alt="Caméra en direct avec les visages encadrés">
-    </div>
+<main id="main">
+  <div class="col" id="col-video">
+    <div class="card video"><img src="/video" alt="Caméra en direct avec les visages encadrés"></div>
+    <span class="meta" id="perf"></span>
   </div>
 
-  <div class="col">
+  <div class="col" id="panel-surveillance" role="tabpanel" aria-labelledby="tab-surveillance">
+    <div class="verdict" id="verdict">En attente</div>
+    <section class="card arm" aria-labelledby="h-arm">
+      <h2 id="h-arm">Arbalète</h2>
+      <button type="button" id="arm-btn">Armer le système</button>
+      <p id="arm-hint">Désarmé : la porte allume ses LED et sonne l'alarme, mais ne tire jamais.</p>
+    </section>
+    <section class="card" aria-labelledby="h-history">
+      <h2 id="h-history">Derniers passages</h2>
+      <div class="history" id="passages"><p class="empty">Aucun passage pour l'instant.</p></div>
+    </section>
+  </div>
+
+  <div class="col" id="panel-capteurs" role="tabpanel" aria-labelledby="tab-capteurs" hidden>
+    <div class="tiles">
+      <div class="tile"><div class="label">Température</div><div><span class="value" id="v-temp">–</span><span class="unit">°C</span></div></div>
+      <div class="tile"><div class="label">Humidité</div><div><span class="value" id="v-hum">–</span><span class="unit">%</span></div></div>
+      <div class="tile"><div class="label">Gaz</div><div><span class="value" id="v-gas">–</span><span class="unit">/ 1023</span></div></div>
+    </div>
+    <p class="meta" id="climate-age"></p>
+    <section class="card">
+      <div class="rowhead">
+        <h2>Historique</h2>
+        <div class="range" role="group" aria-label="Période affichée">
+          <button type="button" data-minutes="15" aria-pressed="false">15 min</button>
+          <button type="button" data-minutes="60" aria-pressed="true">1 h</button>
+          <button type="button" data-minutes="360" aria-pressed="false">6 h</button>
+          <button type="button" data-minutes="1440" aria-pressed="false">24 h</button>
+        </div>
+      </div>
+      <h2>Température (°C)</h2><canvas class="chart" id="chart-temp"></canvas>
+      <h2>Humidité (%)</h2><canvas class="chart" id="chart-hum"></canvas>
+      <h2>Gaz (0 – 1023, plus c'est haut, plus il y a de gaz)</h2><canvas class="chart" id="chart-gas"></canvas>
+    </section>
+  </div>
+
+  <div class="col" id="panel-visages" role="tabpanel" aria-labelledby="tab-visages" hidden>
     <section class="card" aria-labelledby="h-live">
       <h2 id="h-live">Devant la caméra</h2>
       <div id="faces"><p class="empty">Personne pour l'instant.</p></div>
     </section>
-
     <section class="card" aria-labelledby="h-add">
       <h2 id="h-add">Enregistrer un visage</h2>
       <form id="add-form" autocomplete="off">
         <div class="row">
           <div>
             <label for="name">Prénom</label>
-            <input type="text" id="name" maxlength="30" placeholder="ex. Sacha" required>
+            <input type="text" id="name" maxlength="30" placeholder="ex. Sacha">
           </div>
           <button type="submit" id="add-btn">Enregistrer</button>
         </div>
         <p class="error" id="add-error" role="alert"></p>
       </form>
       <div class="progress" id="progress" hidden></div>
-      <p class="hint">Une seule personne face à la caméra. 10 photos sont prises en quelques secondes : bougez un peu la tête entre chaque photo.</p>
+      <p class="hint">Une seule personne face à la caméra. 10 photos sont prises en quelques secondes : bougez un peu la tête entre chaque photo. La porte ne tire jamais pendant un enregistrement.</p>
     </section>
-
     <section class="card" aria-labelledby="h-people">
       <h2 id="h-people">Visages enregistrés</h2>
       <div id="people"><p class="empty">Aucun visage enregistré.</p></div>
     </section>
-
     <section class="card" aria-labelledby="h-threshold">
       <h2 id="h-threshold">Réglage de la reconnaissance</h2>
       <label for="threshold">Seuil : <span class="tv" id="threshold-value">–</span></label>
@@ -111,9 +185,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
 <script>
 const $ = (id) => document.getElementById(id);
+const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+let tab = "surveillance";
 let threshold = 0.36;
 let dragging = false;
 let wasEnrolling = false;
+let armed = false;
+let lastDoor = "";
+let minutes = 60;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -121,7 +200,137 @@ function el(tag, className, text) {
   if (text !== undefined) node.textContent = text;
   return node;
 }
+const hhmmss = (t) => new Date(t * 1000).toLocaleTimeString("fr-FR");
 
+function setChip(id, text, kind) {
+  const chip = $(id);
+  chip.textContent = text;
+  chip.className = "chip" + (kind ? " " + kind : "");
+}
+
+/* ---------- onglets ---------- */
+function showTab(name) {
+  tab = name;
+  for (const b of document.querySelectorAll("nav button")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
+  for (const t of ["surveillance", "capteurs", "visages"]) $("panel-" + t).hidden = t !== name;
+  $("col-video").hidden = name === "capteurs";
+  $("main").classList.toggle("wide", name === "capteurs");
+  try { localStorage.setItem("sentinel-tab", name); } catch {}
+  if (history.replaceState) history.replaceState(null, "", "#" + name);
+  if (name === "capteurs") loadReadings();
+  if (name === "visages") loadPeople();
+}
+for (const b of document.querySelectorAll("nav button")) b.addEventListener("click", () => showTab(b.dataset.tab));
+window.addEventListener("hashchange", () => {
+  const name = location.hash.slice(1);
+  if (["surveillance", "capteurs", "visages"].includes(name) && name !== tab) showTab(name);
+});
+
+/* ---------- surveillance ---------- */
+function renderVerdict(door) {
+  const v = $("verdict");
+  v.className = "verdict" + (door.state === "idle" ? "" : " " + door.state);
+  v.textContent = door.state === "idle" ? "En attente" : door.text;
+}
+
+function renderArm() {
+  $("arm-btn").textContent = armed ? "ARMÉ : désarmer" : "Armer le système";
+  $("arm-btn").classList.toggle("armed", armed);
+  $("arm-hint").textContent = armed
+    ? "Armé : un visage inconnu pendant 3 secondes déclenche l'arbalète."
+    : "Désarmé : la porte allume ses LED et sonne l'alarme, mais ne tire jamais.";
+}
+$("arm-btn").addEventListener("click", async () => {
+  const r = await post("/api/arm", { armed: !armed });
+  if (r.ok) { armed = (await r.json()).armed; renderArm(); }
+});
+
+async function loadPassages() {
+  const rows = await (await fetch("/api/passages")).json();
+  const box = $("passages");
+  box.replaceChildren();
+  if (!rows.length) { box.append(el("p", "empty", "Aucun passage pour l'instant.")); return; }
+  for (const p of rows) {
+    const row = el("div", "passage");
+    if (p.snapshot) {
+      const a = el("a"); a.href = "/snapshots/" + p.snapshot; a.target = "_blank"; a.rel = "noopener";
+      const img = el("img", "thumb"); img.src = "/snapshots/" + p.snapshot; img.alt = "Capture de l'inconnu"; img.loading = "lazy";
+      a.append(img); row.append(a);
+    } else {
+      row.append(el("div", "thumb"));
+    }
+    const info = el("div");
+    info.append(el("span", "who " + (p.name ? "ok" : "bad"), p.name || "Inconnu"));
+    info.append(el("small", "", `${hhmmss(p.started)} · score ${p.score >= 0 ? p.score.toFixed(2) : "–"}`));
+    row.append(info);
+    row.append(p.fired ? el("span", "tag", "TIR") : el("span"));
+    box.append(row);
+  }
+}
+
+/* ---------- capteurs ---------- */
+function drawChart(canvas, points, key, color) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  const css = getComputedStyle(document.documentElement);
+  const ink = css.getPropertyValue("--muted").trim(), line = css.getPropertyValue("--line").trim();
+  const pts = points.filter((p) => p[key] !== null && p[key] !== undefined);
+  ctx.font = "12px system-ui, sans-serif";
+  if (pts.length < 2) {
+    ctx.fillStyle = ink; ctx.fillText("Pas encore assez de mesures sur cette période.", 8, h / 2);
+    return;
+  }
+  const pad = { l: 44, r: 10, t: 8, b: 22 };
+  const t0 = pts[0].at, t1 = pts[pts.length - 1].at;
+  let lo = Math.min(...pts.map((p) => p[key])), hi = Math.max(...pts.map((p) => p[key]));
+  if (hi - lo < 1) { lo -= 1; hi += 1; }
+  const x = (t) => pad.l + (t - t0) / Math.max(t1 - t0, 1) * (w - pad.l - pad.r);
+  const y = (v) => h - pad.b - (v - lo) / (hi - lo) * (h - pad.t - pad.b);
+  ctx.strokeStyle = line; ctx.fillStyle = ink; ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const v = lo + (hi - lo) * i / 3, yy = y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(w - pad.r, yy); ctx.stroke();
+    ctx.fillText(v.toFixed(key === "gas" ? 0 : 1), 4, yy + 4);
+  }
+  ctx.fillText(hhmmss(t0), pad.l, h - 6);
+  const end = hhmmss(t1); ctx.fillText(end, w - pad.r - ctx.measureText(end).width, h - 6);
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(x(p.at), y(p[key])) : ctx.moveTo(x(p.at), y(p[key]))));
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  const last = pts[pts.length - 1];
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x(last.at), y(last[key]), 3.5, 0, 2 * Math.PI); ctx.fill();
+}
+
+async function loadReadings() {
+  const points = await (await fetch("/api/readings?minutes=" + minutes)).json();
+  const css = getComputedStyle(document.documentElement);
+  drawChart($("chart-temp"), points, "temp", css.getPropertyValue("--c-temp").trim());
+  drawChart($("chart-hum"), points, "hum", css.getPropertyValue("--c-hum").trim());
+  drawChart($("chart-gas"), points, "gas", css.getPropertyValue("--c-gas").trim());
+}
+for (const b of document.querySelectorAll(".range button")) {
+  b.addEventListener("click", () => {
+    minutes = Number(b.dataset.minutes);
+    for (const o of document.querySelectorAll(".range button")) o.setAttribute("aria-pressed", String(o === b));
+    loadReadings();
+  });
+}
+window.addEventListener("resize", () => { if (tab === "capteurs") loadReadings(); });
+
+function renderClimate(link) {
+  const c = link.climate || {};
+  $("v-temp").textContent = c.temp !== undefined ? c.temp.toFixed(1) : "–";
+  $("v-hum").textContent = c.hum !== undefined ? c.hum.toFixed(0) : "–";
+  $("v-gas").textContent = c.gas !== undefined ? c.gas.toFixed(0) : "–";
+  $("climate-age").textContent = link.climate_age === null ? "Aucune mesure reçue de l'ESP pour l'instant."
+    : `Dernière mesure il y a ${link.climate_age} s.`;
+}
+
+/* ---------- visages ---------- */
 function renderFaces(faces) {
   const box = $("faces");
   box.replaceChildren();
@@ -130,7 +339,8 @@ function renderFaces(faces) {
     const known = f.name !== null;
     const row = el("div", "face");
     const top = el("div", "face-top");
-    top.append(el("span", known ? "ok" : "bad", known ? f.name : "Inconnu"), el("span", "tv", f.score < 0 ? "aucun visage enregistré" : f.score.toFixed(2)));
+    top.append(el("span", known ? "ok" : "bad", known ? f.name : "Inconnu"),
+               el("span", "tv", f.score < 0 ? "aucun visage enregistré" : f.score.toFixed(2)));
     const bar = el("div", "bar");
     const fill = el("span");
     fill.style.width = Math.max(0, Math.min(1, f.score)) * 100 + "%";
@@ -169,14 +379,42 @@ async function loadPeople() {
   }
 }
 
+$("add-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("add-error").textContent = "";
+  const name = $("name").value.trim();
+  if (!name) { $("add-error").textContent = "Entrez un prénom."; return; }
+  const r = await post("/api/faces", { name });
+  if (!r.ok) { $("add-error").textContent = (await r.json()).detail || "Erreur."; return; }
+  $("name").value = "";
+  wasEnrolling = true;
+});
+$("name").addEventListener("input", () => { $("add-error").textContent = ""; });
+
+const slider = $("threshold");
+slider.addEventListener("input", () => { dragging = true; $("threshold-value").textContent = Number(slider.value).toFixed(2); });
+slider.addEventListener("change", async () => {
+  await post("/api/threshold", { value: Number(slider.value) });
+  dragging = false;
+});
+
+/* ---------- état en direct ---------- */
 async function poll() {
   try {
     const s = await (await fetch("/api/live")).json();
-    $("cam-status").textContent = s.error ? s.error : "caméra en direct";
-    $("cam-status").classList.toggle("bad", !!s.error);
+    setChip("chip-camera", s.error ? s.error : "caméra en direct", s.error ? "bad" : "");
+    setChip("chip-link", s.link.connected ? "liaison chiffrée" : s.link.status, s.link.connected ? "" : "bad");
+    setChip("chip-esp", s.link.esp_online ? "ESP en ligne" : "ESP hors ligne", s.link.esp_online ? "" : "bad");
     $("perf").textContent = s.error ? "" : `${s.ms} ms par image`;
+
+    renderVerdict(s.door);
+    if (s.door.armed !== armed) { armed = s.door.armed; renderArm(); }
+    const doorKey = s.door.state + s.door.text;
+    if (doorKey !== lastDoor) { lastDoor = doorKey; loadPassages(); }
+    renderClimate(s.link);
+
     threshold = s.threshold;
-    if (!dragging) { $("threshold").value = threshold; $("threshold-value").textContent = threshold.toFixed(2); }
+    if (!dragging) { slider.value = threshold; $("threshold-value").textContent = threshold.toFixed(2); }
     renderFaces(s.faces);
     const enrolling = !!s.enrollment;
     $("progress").hidden = !enrolling && !s.rebuilding;
@@ -186,35 +424,21 @@ async function poll() {
     if (wasEnrolling && !enrolling && !s.rebuilding) loadPeople();
     wasEnrolling = enrolling || s.rebuilding;
   } catch {
-    $("cam-status").textContent = "serveur arrêté";
-    $("cam-status").classList.add("bad");
+    setChip("chip-camera", "serveur arrêté : relancez start.bat", "bad");
   }
 }
 
-$("add-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  $("add-error").textContent = "";
-  const name = $("name").value.trim();
-  if (!name) { $("add-error").textContent = "Entrez un prénom."; return; }
-  const r = await fetch("/api/faces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
-  if (!r.ok) { $("add-error").textContent = (await r.json()).detail || "Erreur."; return; }
-  $("name").value = "";
-  wasEnrolling = true;
-  poll();
-});
-$("name").addEventListener("input", () => { $("add-error").textContent = ""; });
-
-const slider = $("threshold");
-slider.addEventListener("input", () => { dragging = true; $("threshold-value").textContent = Number(slider.value).toFixed(2); });
-slider.addEventListener("change", async () => {
-  await fetch("/api/threshold", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value: Number(slider.value) }) });
-  dragging = false;
-  poll();
-});
-
-loadPeople();
+let start = location.hash.slice(1);
+if (!["surveillance", "capteurs", "visages"].includes(start)) {
+  try { start = localStorage.getItem("sentinel-tab") || "surveillance"; } catch { start = "surveillance"; }
+}
+showTab(["surveillance", "capteurs", "visages"].includes(start) ? start : "surveillance");
+renderArm();
+loadPassages();
 poll();
 setInterval(poll, 400);
+setInterval(loadPassages, 5000);
+setInterval(() => { if (tab === "capteurs") loadReadings(); }, 5000);
 </script>
 </body>
 </html>

@@ -59,12 +59,12 @@ Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémité
 - [x] Captures et base hors de git
 **Fichiers :** `server/sentinel/store.py`, `server/tests/test_store.py`, `server/sentinel/app.py`
 
-### T11 : Dashboard en onglets
+### T11 : Dashboard en onglets ✅ (essai : vrai Mosquitto + faux ESP + caméra, 3 onglets vérifiés)
 **Description :** **Surveillance** : caméra, verdict en gros (« Bienvenue <nom> » / « ACCES REFUSE » / « En attente »), bouton armer/désarmer, état de l'ESP, historique des passages avec captures. **Capteurs** : valeurs actuelles et courbes température, humidité, gaz (dessinées sans bibliothèque externe), état de l'ESP. **Visages** : la page existante.
 **Critères :**
-- [ ] Un passage apparaît en < 3 s sans recharger ; l'historique survit à un redémarrage
-- [ ] Armer/désarmer change le comportement ; au démarrage : désarmé
-- [ ] ESP débranché → « hors ligne » en < 5 s
+- [x] Un passage apparaît en < 3 s sans recharger ; l'historique survit à un redémarrage
+- [x] Armer/désarmer change le comportement ; au démarrage : désarmé
+- [x] ESP débranché → « hors ligne » en < 5 s
 **Fichiers :** `server/sentinel/app.py`, `server/sentinel/static/index.html`
 
 ---
