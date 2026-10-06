@@ -71,12 +71,12 @@ Chaque tâche de câblage s'accompagne d'un schéma sans croisement, extrémité
 
 ## Phase C : installer et lancer
 
-### T13 : Installation et lancement en une commande
+### T13 : Installation et lancement en une commande ✅ (à essayer en entier sur le PC serveur)
 **Description :** `install.bat` : vérifie Python, crée le venv, installe les dépendances, télécharge les modèles, installe Mosquitto (winget), ajoute la règle de pare-feu pour le port 8883, lance `sentinel.setup`. `start.bat` : lance `sentinel.app` et ouvre le navigateur. README réécrit en 3 étapes : installer, téléverser l'ESP, lancer.
 **Critères :**
-- [ ] Les deux scripts fonctionnent depuis un double-clic
-- [ ] README : installation + checklist d'essai réel + dépannage
-- [ ] Toutes les vérifications passent ; push sur GitHub
+- [x] Les deux scripts fonctionnent depuis un double-clic
+- [x] README : installation + checklist d'essai réel + dépannage
+- [x] Toutes les vérifications passent ; push sur GitHub
 **Fichiers :** `install.bat`, `start.bat`, `README.md`
 
 ---

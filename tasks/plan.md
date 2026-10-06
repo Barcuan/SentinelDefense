@@ -51,7 +51,7 @@ T7 ── T8 historique + captures + alarme ── T11 dashboard Surveillance + 
 - [x] T11 : Dashboard en onglets — Surveillance (verdict, armer, historique) et Capteurs (courbes, état ESP)
 
 ### Phase C : installer et lancer en une commande
-- [ ] T13 : `install.bat`, `start.bat`, README en 3 étapes ; vérifications finales
+- [x] T13 : `install.bat`, `start.bat`, README en 3 étapes ; vérifications finales
 
 **Checkpoint final** : sur le PC serveur, install → téléversement ESP → start → tout fonctionne depuis le dashboard.
 

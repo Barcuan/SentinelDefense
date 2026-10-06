@@ -1,6 +1,6 @@
 """Serveur Sentinel-X : caméra, logique de la porte, liaison chiffrée avec l'ESP et dashboard.
 
-    python -m sentinel.app        (depuis le dossier server), puis ouvrir http://localhost:8000
+    start.bat, ou : python -m sentinel.app --open   (depuis le dossier server) → http://localhost:8000
 """
 
 import re
@@ -8,6 +8,7 @@ import shutil
 import sys
 import threading
 import time
+import webbrowser
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -315,5 +316,7 @@ def set_threshold(body: Threshold) -> dict[str, float]:
 
 
 if __name__ == "__main__":
+    if "--open" in sys.argv:  # start.bat : ouvre le navigateur une fois le serveur prêt
+        threading.Timer(3, webbrowser.open, ["http://localhost:8000"]).start()
     # 127.0.0.1 : le dashboard n'est visible que depuis ce PC (pentest des autres groupes jeudi).
     uvicorn.run(app, host="127.0.0.1", port=8000, timeout_graceful_shutdown=1)

@@ -72,30 +72,24 @@ Le firmware ne tire jamais s'il a perdu le lien depuis plus de 2 s.
 ## Commandes
 
 ```
-python -m venv .venv && .venv\Scripts\activate
-pip install -r server/requirements.txt
-python server/scripts/get_models.py                  # modèles ONNX YuNet + SFace
-python server/scripts/gen_certs.py                   # CA + certs dans link/certs/
-mosquitto -c link/mosquitto.conf -v
-python -m sentinel.enroll data/faces                 # data/faces/<nom>/*.jpg → data/faces.npz
-uvicorn sentinel.app:app --app-dir server --port 8000
-pytest
-ruff check . && mypy server/sentinel
-gitleaks detect --redact --no-banner
+install.bat                                  une fois : dépendances, modèles, Mosquitto, pare-feu, liaison chiffrée
+start.bat                                    lance tout et ouvre http://localhost:8000
+python -m sentinel.setup [--force]           (dossier server) régénère certificats, mots de passe, secrets.h
+pytest ; ruff check . ; mypy server/sentinel vérifications
 ```
 
-Firmware : ouvrir `firmware/door-node/door-node.ino` dans Arduino IDE, carte « NodeMCU 1.0 (ESP-12E Module) », Téléverser.
+Firmware : Arduino IDE, `firmware/door-node/door-node.ino`, carte « NodeMCU 1.0 (ESP-12E Module) », bibliothèques PubSubClient et DHT sensor library.
 
 ## Structure
 
 ```
-firmware/door-node/      door-node.ino, secrets.h.example (secrets.h ignoré par git)
-link/                    mosquitto.conf, certs/ (ignoré par git)
-server/sentinel/         face_id.py, guard.py, mqtt.py, store.py, app.py, enroll.py
-server/sentinel/static/  index.html (dashboard)
-server/scripts/          get_models.py, gen_certs.py
+install.bat, start.bat   installation et lancement
+firmware/door-node/      door-node.ino, secrets.h.example (secrets.h généré, ignoré par git)
+link/                    généré : certificats, mosquitto.conf, passwd, acl (ignoré par git)
+server/sentinel/         app.py (serveur + dashboard), face_id.py, enroll.py, guard.py, door.py, mqtt.py, store.py, setup.py
+server/sentinel/static/  index.html (dashboard : Surveillance, Capteurs, Visages)
+server/scripts/          get_models.py, windows_admin.ps1
 server/tests/            tests pytest
-server/models/           modèles ONNX (téléchargés, ignorés par git)
 data/                    faces/, snapshots/, sentinel.db (ignoré par git — photos de personnes)
 ```
 
