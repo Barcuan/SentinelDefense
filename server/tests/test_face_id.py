@@ -85,3 +85,23 @@ def test_gallery_survives_save_and_load(tmp_path):
 
 def test_missing_gallery_file_is_empty(tmp_path):
     assert load_gallery(tmp_path / "absent.npz") == {}
+
+
+def test_one_lookalike_photo_is_not_enough_to_be_recognized():
+    # 1 photo ressemble fort, les 4 autres pas du tout : la moyenne des 3 meilleures reste basse.
+    photos = np.stack([unit([1, 0, 0])] + [unit([0, 1, 0])] * 4)
+    face = identify(unit([1, 0, 0]), {"Sacha": photos}, threshold=0.4)
+
+    assert face.name is None
+
+
+def test_several_matching_photos_are_recognized():
+    photos = np.stack([unit([1, 0, 0]), unit([0.95, 0.05, 0]), unit([0.9, 0.1, 0]), unit([0, 1, 0])])
+
+    assert identify(unit([1, 0, 0]), {"Sacha": photos}, threshold=0.4).name == "Sacha"
+
+
+def test_default_threshold_is_stricter_than_the_opencv_baseline():
+    from sentinel.face_id import THRESHOLD
+
+    assert THRESHOLD >= 0.45

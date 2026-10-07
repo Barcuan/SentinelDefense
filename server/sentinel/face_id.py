@@ -15,7 +15,8 @@ SFACE = MODELS / "face_recognition_sface_2021dec.onnx"
 GALLERY = ROOT / "data" / "faces.npz"
 MAX_SIZE = (640, 480)  # le sujet impose de réduire les images pour rester < 100 ms par image
 CAMERA = int(os.environ.get("SENTINEL_CAMERA", "0"))  # 1 si la C270 n'est pas la caméra par défaut
-THRESHOLD = float(os.environ.get("SENTINEL_THRESHOLD", "0.363"))  # seuil cosinus SFace conseillé par OpenCV
+THRESHOLD = float(os.environ.get("SENTINEL_THRESHOLD", "0.45"))  # plus strict que les 0,363 d'OpenCV : mesuré le 2026-10-07, vrais matchs ~0,6, faux ~0,36–0,45
+TOP_K = 3  # score = moyenne des 3 photos les plus ressemblantes : une seule photo « sosie » ne suffit plus
 
 Gallery = dict[str, np.ndarray]  # nom → empreintes normalisées, une ligne de 128 valeurs par photo
 
@@ -49,10 +50,11 @@ class FaceRecognizer:
 
 
 def identify(embedding: np.ndarray, gallery: Gallery, threshold: float = THRESHOLD) -> Face:
-    """Compare à toutes les photos enregistrées ; garde la plus ressemblante (similarité cosinus)."""
+    """Compare à toutes les photos enregistrées (similarité cosinus) ; score d'une personne = moyenne de ses TOP_K meilleures."""
     best_name, best = None, -1.0
     for name, embeddings in gallery.items():
-        score = float(np.max(embeddings @ embedding))
+        similarities = np.sort(embeddings @ embedding)
+        score = float(similarities[-min(TOP_K, len(similarities)):].mean())
         if score > best:
             best_name, best = name, score
     return Face(best_name if best >= threshold else None, best)

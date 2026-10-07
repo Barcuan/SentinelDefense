@@ -51,7 +51,7 @@ Changer ce contrat = **demander à l'équipe**.
 | État | Entrée | LED / voix / dashboard |
 |---|---|---|
 | `idle` | aucun visage depuis 3 s | LED éteintes |
-| `green` | visage connu (score SFace ≥ 0.363) | vert, « Bienvenue <nom> » (gardé 3 s après la disparition du visage) |
+| `green` | visage connu : moyenne des 3 photos les plus ressemblantes ≥ 0,45, stable sur ~0,6 s (70 % des images), visage d'au moins 70 px de large | vert, « Bienvenue <nom> » (gardé 3 s après la disparition du visage) |
 | `red` | visage inconnu (et aucun membre dans l'image) | rouge, « ACCES REFUSE », capture enregistrée ; avertissement vocal à 3 s |
 
 Règles de tir (toutes nécessaires) :

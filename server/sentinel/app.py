@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from sentinel import face_id
-from sentinel.door import Door, pick_face
+from sentinel.door import Door, Smoother, pick_face
 from sentinel.enroll import FACES_DIR, SHOT_EVERY_S, SHOTS, build_gallery
 from sentinel.face_id import (
     CAMERA,
@@ -41,6 +41,7 @@ from sentinel.mqtt import Link
 from sentinel.store import SNAPSHOTS, Store, valid_snapshot
 
 STATIC = Path(__file__).parent / "static"
+MIN_FACE_PX = 70  # visage plus étroit (en pixels, image 640×480) = trop loin pour décider
 # Le prénom devient un nom de dossier : lettres (accents compris), chiffres, espace, tiret. Jamais de / ni de ..
 NAME_RE = re.compile(r"[^\W_][\w\- ]{0,29}")
 
@@ -97,6 +98,7 @@ class Camera:
         self.door = door
         self.store = store
         self._passage_id = 0
+        self.smoother = Smoother()
         self.threshold = face_id.THRESHOLD
         self.gallery: Gallery = {}
         self.jpeg: bytes | None = None
@@ -153,16 +155,21 @@ class Camera:
         faces = []
         seen: list[Face] = []
         for row in rows:
-            face = identify(recognizer.embed(frame, row), self.gallery, self.threshold)
             x, y, w, h = row[:4].astype(int)
+            if w < MIN_FACE_PX:  # trop loin : l'empreinte serait trop floue pour être fiable
+                cv2.rectangle(shown, (x, y), (x + w, y + h), (160, 160, 160), 1)
+                cv2.putText(shown, "approchez", (x, max(y - 6, 14)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 160, 160), 1)
+                continue
+            face = identify(recognizer.embed(frame, row), self.gallery, self.threshold)
             color = (60, 180, 60) if face.authorized else (40, 40, 220)
             cv2.rectangle(shown, (x, y), (x + w, y + h), color, 2)
             cv2.putText(shown, face_id.label(face), (x, max(y - 8, 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
             faces.append({"name": face.name, "score": round(face.score, 3)})
             seen.append(face)
         # Pendant un enregistrement, la personne est encore « inconnue » : la porte l'ignore (pas de tir).
-        chosen = None if enrollment else pick_face(seen)
-        command = self.door.step(chosen, time.monotonic())
+        now = time.monotonic()
+        chosen = None if enrollment else self.smoother.push(pick_face(seen), now)
+        command = self.door.step(chosen, now)
         if self.door.passage_started and chosen is not None:
             snapshot = None
             if not chosen.authorized:
