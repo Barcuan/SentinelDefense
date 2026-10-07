@@ -1,6 +1,6 @@
 # Sentinel-X : la porte gardée
 
-Une webcam reconnaît les visages devant la porte. Visage connu : LED verte et « Bienvenue ». Visage inconnu : LED rouge, alarme et capture ; s'il reste inconnu 3 s et que le système est armé, le servo déclenche l'arbalète imprimée en 3D. Le dashboard montre la caméra, les passages, la température, l'humidité et le gaz.
+Une webcam reconnaît les visages devant la porte. Visage connu : LED verte et « Bienvenue ». Visage inconnu : LED rouge et capture ; au bout de 3 s, le PC prononce « Personne inconnue. Si vous ne vous éloignez pas de la zone, nous ouvrirons le feu. » ; si la personne est toujours là à 11 s et que le système est armé, le servo déclenche l'arbalète imprimée en 3D. Si un membre connu est dans l'image avec l'inconnu, ni avertissement ni tir. Le dashboard montre la caméra, les passages, la température, l'humidité et le gaz.
 
 Détails : [SPEC.md](SPEC.md) (ce qu'on construit, câblage), [tasks/plan.md](tasks/plan.md) (avancement), [CONSTRAINTS.md](CONSTRAINTS.md) (règles de qualité).
 
@@ -43,8 +43,8 @@ En haut à droite, trois voyants : **caméra**, **liaison chiffrée**, **ESP**. 
 1. `start.bat` lancé, le partage de connexion activé, l'ESP branché : le voyant **ESP** passe au vert en moins de 30 s.
 2. Onglet **Capteurs** : une mesure toutes les 2 s. Soufflez sur le DHT11 : l'humidité monte. Gel hydroalcoolique près du capteur de gaz : le gaz monte.
 3. Onglet **Visages** : enregistrez les 3 membres.
-4. Un membre devant la caméra : **LED verte** + « Bienvenue <prénom> ». Un inconnu : **LED rouge** + alarme + capture dans l'historique.
-5. **Désarmé** : un inconnu qui reste ne déclenche **pas** le servo. **Armé** (sans arbalète montée la première fois) : après 3 s, un aller-retour du servo, « TIR » dans l'historique.
+4. Un membre devant la caméra : **LED verte** + « Bienvenue <prénom> ». Un inconnu : **LED rouge** + capture dans l'historique.
+5. Un inconnu seul : au bout de 3 s, l'avertissement vocal. **Désarmé** : jamais de tir. **Armé** (sans arbalète montée la première fois) : à 11 s, un aller-retour du servo, « TIR » dans l'historique. Un membre à côté de l'inconnu : ni avertissement ni tir.
 6. Débranchez l'ESP : voyant **ESP hors ligne** en moins de 5 s. Coupez `start.bat` : les LED s'éteignent en 2 s.
 
 ## Dépannage

@@ -119,7 +119,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     <section class="card arm" aria-labelledby="h-arm">
       <h2 id="h-arm">Arbalète</h2>
       <button type="button" id="arm-btn">Armer le système</button>
-      <p id="arm-hint">Désarmé : la porte allume ses LED et sonne l'alarme, mais ne tire jamais.</p>
+      <p id="arm-hint">Désarmé : la porte allume ses LED et prononce l'avertissement, mais ne tire jamais.</p>
     </section>
     <section class="card" aria-labelledby="h-history">
       <h2 id="h-history">Derniers passages</h2>
@@ -237,8 +237,8 @@ function renderArm() {
   $("arm-btn").textContent = armed ? "ARMÉ : désarmer" : "Armer le système";
   $("arm-btn").classList.toggle("armed", armed);
   $("arm-hint").textContent = armed
-    ? "Armé : un visage inconnu pendant 3 secondes déclenche l'arbalète."
-    : "Désarmé : la porte allume ses LED et sonne l'alarme, mais ne tire jamais.";
+    ? "Armé : un inconnu seul reçoit l'avertissement vocal à 3 s, puis l'arbalète tire à 11 s s'il est toujours là."
+    : "Désarmé : la porte allume ses LED et prononce l'avertissement, mais ne tire jamais.";
 }
 $("arm-btn").addEventListener("click", async () => {
   const r = await post("/api/arm", { armed: !armed });

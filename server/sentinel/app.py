@@ -3,8 +3,10 @@
     start.bat, ou : python -m sentinel.app --open   (depuis le dossier server) → http://localhost:8000
 """
 
+import os
 import re
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -65,17 +67,27 @@ class Enrollment:
         self.last = now
 
 
-def alarm() -> None:
-    """Sirène courte sur le haut-parleur du PC, dans un thread à part pour ne pas figer la caméra."""
-    if sys.platform != "win32":
+WARNING = "Personne inconnue. Si vous ne vous éloignez pas de la zone, nous ouvrirons le feu."
+# Synthèse vocale de Windows (voix française si installée), lancée à part pour ne pas figer la caméra.
+SPEAK_PS = (
+    "Add-Type -AssemblyName System.Speech;"
+    "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
+    "$v = $s.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.Name -like 'fr*' } | Select-Object -First 1;"
+    "if ($v) { $s.SelectVoice($v.VoiceInfo.Name) };"
+    "$s.Rate = 0; $s.Volume = 100; $s.Speak($env:SENTINEL_SAY)"
+)
+_speaker: subprocess.Popen[bytes] | None = None
+
+
+def speak(text: str) -> None:
+    """Prononce le texte sur le haut-parleur du PC, sans attendre ; ignoré si une phrase est déjà en cours."""
+    global _speaker
+    if sys.platform != "win32" or (_speaker is not None and _speaker.poll() is None):
         return
-    import winsound
-
-    def play() -> None:
-        for frequency in (880, 660, 880, 660):
-            winsound.Beep(frequency, 180)
-
-    threading.Thread(target=play, daemon=True).start()
+    env = {**os.environ, "SENTINEL_SAY": text}  # le texte passe par l'environnement : jamais interprété comme du code
+    _speaker = subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", SPEAK_PS], env=env,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                creationflags=subprocess.CREATE_NO_WINDOW)
 
 
 class Camera:
@@ -157,8 +169,9 @@ class Camera:
                 snapshot = f"{int(time.time() * 1000)}.jpg"
                 SNAPSHOTS.mkdir(parents=True, exist_ok=True)
                 cv2.imwrite(str(SNAPSHOTS / snapshot), shown)
-                alarm()
             self._passage_id = self.store.add_passage(time.time(), chosen.name, chosen.score, snapshot)
+        if command.warn:
+            speak(WARNING)
         if command.fire:
             self.store.mark_fired(self._passage_id)
         if enrollment and not enrollment.done:

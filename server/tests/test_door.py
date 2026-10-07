@@ -37,10 +37,20 @@ def test_broken_or_absurd_climate_is_ignored():
     assert parse_climate(b"[1,2]") is None
 
 
-def test_any_unknown_face_wins_over_known_ones():
-    assert pick_face([SACHA, INTRUS]) == INTRUS
-    assert pick_face([SACHA]) == SACHA
+def test_a_known_face_wins_over_unknown_ones():
+    assert pick_face([INTRUS, SACHA]) == SACHA
+    assert pick_face([INTRUS]) == INTRUS
     assert pick_face([]) is None
+
+
+def test_member_with_a_stranger_gets_no_warning_and_no_shot():
+    door, link = make_door()
+    door.armed = True
+    for t in range(30):
+        cmd = door.step(pick_face([INTRUS, SACHA]), now=t)
+        assert not cmd.warn and not cmd.fire
+
+    assert not [m for m in link.sent if m[0] == T_FIRE]
 
 
 def test_led_is_published_retained_and_only_when_it_changes():

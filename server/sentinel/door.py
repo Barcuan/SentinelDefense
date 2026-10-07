@@ -13,8 +13,8 @@ class Publisher(Protocol):
 
 
 def pick_face(faces: list[Face]) -> Face | None:
-    """Un inconnu dans l'image l'emporte : un membre ne fait pas entrer quelqu'un d'autre avec lui."""
-    return next((f for f in faces if not f.authorized), faces[0] if faces else None)
+    """Un membre dans l'image l'emporte : il accompagne l'inconnu, donc ni avertissement ni tir (choix de l'équipe)."""
+    return next((f for f in faces if f.authorized), faces[0] if faces else None)
 
 
 class Door:

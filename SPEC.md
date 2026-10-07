@@ -10,8 +10,10 @@ Le prof a autorisé à sortir du socle du sujet (capteurs DHT22/MQ-2/PIR non fou
 Une porte « gardée » pour la démo. La webcam C270 identifie la personne devant la porte :
 
 - **connue** → LED verte, « Bienvenue <nom> » sur le dashboard ;
-- **inconnue** → LED rouge + alarme sonore (haut-parleurs du PC) + « ACCES REFUSE » + capture d'écran ;
-- **inconnue pendant 3 s ET système armé** → le servo SG90 déclenche l'arbalète imprimée en 3D (projectile mousse/papier).
+- **inconnue** → LED rouge + « ACCES REFUSE » + capture d'écran ;
+- **inconnue pendant 3 s** → le PC prononce « Personne inconnue. Si vous ne vous éloignez pas de la zone, nous ouvrirons le feu. » (voix Windows, pas de bip) ;
+- **toujours inconnue à 11 s ET système armé** → le servo SG90 déclenche l'arbalète imprimée en 3D (projectile mousse/papier) ;
+- **un visage connu présent dans l'image** → il l'emporte : vert, ni avertissement ni tir, même avec un inconnu à côté (choix de l'équipe du 2026-10-07).
 
 Le dashboard remonte tout : ce que voit la caméra, la personne devant la porte (nom ou inconnu, capture), le message affiché, l'historique des passages, la température, l'humidité et le niveau de gaz (capteurs DHT11 et MQ sur l'ESP, avec courbes), l'état de l'ESP, et le bouton armer/désarmer.
 
@@ -46,16 +48,16 @@ Changer ce contrat = **demander à l'équipe**.
 
 ## Logique `guard`
 
-| État | Entrée | LED / alarme / dashboard |
+| État | Entrée | LED / voix / dashboard |
 |---|---|---|
 | `idle` | aucun visage depuis 3 s | LED éteintes |
 | `green` | visage connu (score SFace ≥ 0.363) | vert, « Bienvenue <nom> » (gardé 3 s après la disparition du visage) |
-| `red` | visage inconnu | rouge + alarme PC, « ACCES REFUSE », capture enregistrée |
+| `red` | visage inconnu (et aucun membre dans l'image) | rouge, « ACCES REFUSE », capture enregistrée ; avertissement vocal à 3 s |
 
 Règles de tir (toutes nécessaires) :
 
 1. état = `red` ;
-2. le visage est resté inconnu pendant `RED_BEFORE_FIRE_S` (3 s, réglable) : un visage connu entre-temps ou 3 s sans visage remettent le compte à zéro ;
+2. le visage est resté inconnu pendant `RED_BEFORE_FIRE_S` (11 s, réglable ; l'avertissement vocal part à `WARN_AFTER_S` = 3 s et dure ~7 s) : un visage connu entre-temps ou 3 s sans visage remettent le compte à zéro ;
 3. système **armé** (désarmé au démarrage, armé depuis le dashboard) ;
 4. 10 s minimum entre deux tirs.
 
@@ -63,7 +65,7 @@ Le firmware ne tire jamais s'il a perdu le lien depuis plus de 2 s.
 
 ## Stack
 
-- **PC serveur** : Python (venv), `opencv-python` (YuNet détection + SFace reconnaissance, modèles ONNX), `paho-mqtt`, `fastapi` + `uvicorn`, `numpy`, SQLite (stdlib), son d'alarme via `winsound` (stdlib).
+- **PC serveur** : Python (venv), `opencv-python` (YuNet détection + SFace reconnaissance, modèles ONNX), `paho-mqtt`, `fastapi` + `uvicorn`, `numpy`, SQLite (stdlib), avertissement vocal via la synthèse vocale de Windows (System.Speech, voix française).
 - **Dashboard** : une page HTML + JS servie par FastAPI ; flux caméra en MJPEG ; données rafraîchies par polling. Pas de framework front.
 - **Firmware** : un croquis Arduino (`.ino`) compilé avec **Arduino IDE**, déjà installé et testé sur le PC serveur. Cœur ESP8266, `PubSubClient`, `WiFiClientSecure` (BearSSL), `Servo`.
 - **Broker** : Mosquitto (Windows).
@@ -141,8 +143,8 @@ Courant : un port USB donne 500–900 mA ; le capteur de gaz chauffe en permanen
 ## Critères de réussite
 
 1. Un membre enrôlé devant la C270 → LED verte + « Bienvenue <nom> » sur le dashboard en < 2 s.
-2. Un inconnu → LED rouge + alarme en < 2 s, capture visible sur le dashboard.
-3. Inconnu pendant 3 s + armé → un seul tir ; désarmé ou connu → aucun tir.
+2. Un inconnu → LED rouge en < 2 s, capture visible sur le dashboard, avertissement vocal à 3 s.
+3. Inconnu seul : avertissement vocal à 3 s ; armé et toujours là à 11 s → un seul tir ; désarmé, connu ou membre présent dans l'image → aucun tir.
 4. Lien coupé → l'ESP éteint ses LED et ne tire pas.
 5. `mosquitto_sub` sans certificat ne peut pas se connecter (lien chiffré prouvé).
 6. Le dashboard affiche la caméra en direct, la température et l'humidité, l'état de l'ESP et l'historique des passages, qui survit à un redémarrage.
@@ -153,4 +155,4 @@ Courant : un port USB donne 500–900 mA ; le capteur de gaz chauffe en permanen
 1. **Dépôt GitHub** : à créer par l'équipe ; bloque l'installation du code sur le PC serveur.
 2. **Carte ULN2003** : à trouver ; sans elle, la caméra reste fixe.
 
-Tranché le 2026-10-06 : kit capteurs du sujet non fourni, pas de PIR ni d'IA prédictive (accord du prof) ; les capteurs de l'équipe (DHT11 température/humidité, capteur de gaz « Flying Fish ») servent à l'affichage sur le dashboard ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer, alarme sur le PC ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; HC-SR04 abandonné au profit d'un capteur température/humidité, le tir part après 3 s de visage inconnu ; Python 3.14 + OpenCV 5.0 fonctionnent.
+Tranché le 2026-10-06 : kit capteurs du sujet non fourni, pas de PIR ni d'IA prédictive (accord du prof) ; les capteurs de l'équipe (DHT11 température/humidité, capteur de gaz « Flying Fish ») servent à l'affichage sur le dashboard ; **un seul ESP8266** (le 2ᵉ reste en secours) ; pas d'écran sur la porte, les messages s'affichent sur le dashboard ; pas de buzzer : avertissement vocal sur le PC (plus de bips depuis le 2026-10-07) ; firmware via Arduino IDE ; stepper plus tard ; pièces 3D gérées par l'équipe ; HC-SR04 abandonné au profit d'un capteur température/humidité, le tir part après 3 s de visage inconnu ; Python 3.14 + OpenCV 5.0 fonctionnent.
