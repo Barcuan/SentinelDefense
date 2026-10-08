@@ -32,9 +32,11 @@ Dans **Arduino IDE** :
 
 Double-cliquez sur **`start.bat`**. Tout démarre (broker chiffré, caméra, logique de la porte, liaison avec l'ESP) et le navigateur s'ouvre sur **http://localhost:8000** :
 
-- **Surveillance** : caméra en direct, verdict en gros, bouton **Armer**, historique des passages avec les captures des inconnus ;
-- **Capteurs** : température, humidité et gaz, avec des courbes sur 15 min à 24 h ;
+- **Surveillance** : caméra en direct, verdict en gros, bouton **Armer**, **panneau de commande** (LED verte/rouge 3 s, tir test si armé), historique des passages avec les captures des inconnus ;
+- **Capteurs** : température, humidité et gaz, avec des courbes sur 15 min à 24 h, et l'historique des **alertes** ;
 - **Visages** : enregistrer un visage (prénom + bouton, 10 photos), supprimer, régler le seuil de reconnaissance.
+
+**Alertes** : une fuite de gaz (valeur nettement au-dessus de l'air habituel de la pièce) ou une surchauffe (> 45 °C) affiche un bandeau rouge dans tous les onglets et le PC l'annonce à voix haute. Un autre programme peut signaler une alerte avec `POST /api/v1/alerts` (`{"kind": "porte", "message": "Porte forcée"}`).
 
 En haut à droite, trois voyants : **caméra**, **liaison chiffrée**, **ESP**. Tous doivent être verts.
 
