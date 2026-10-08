@@ -6,6 +6,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from sentinel.alerts import Alert
 from sentinel.face_id import ROOT
 
 DB = ROOT / "data" / "sentinel.db"
@@ -32,6 +33,9 @@ class Store:
                     snapshot TEXT, fired INTEGER NOT NULL DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS readings (at REAL NOT NULL, temp REAL, hum REAL, gas REAL);
                 CREATE INDEX IF NOT EXISTS readings_at ON readings (at);
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id INTEGER PRIMARY KEY, at REAL NOT NULL, kind TEXT NOT NULL, message TEXT NOT NULL,
+                    value REAL, source TEXT NOT NULL);
             """)
 
     def add_passage(self, started: float, name: str | None, score: float, snapshot: str | None) -> int:
@@ -67,3 +71,15 @@ class Store:
     def prune(self, now: float) -> None:
         with self._lock, self._db:
             self._db.execute("DELETE FROM readings WHERE at < ?", (now - KEEP_READINGS_S,))
+
+    def add_alert(self, alert: Alert) -> None:
+        with self._lock, self._db:
+            self._db.execute("INSERT INTO alerts (at, kind, message, value, source) VALUES (?, ?, ?, ?, ?)",
+                             (alert.at, alert.kind, alert.message, alert.value, alert.source))
+
+    def alerts(self, limit: int = 30) -> list[dict[str, Any]]:
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT at, kind, message, value, source FROM alerts ORDER BY at DESC, id DESC LIMIT ?",
+                (limit,)).fetchall()
+        return [{"at": r[0], "kind": r[1], "message": r[2], "value": r[3], "source": r[4]} for r in rows]

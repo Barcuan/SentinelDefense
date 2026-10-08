@@ -54,6 +54,15 @@ main.wide { grid-template-columns: minmax(0, 1fr); }
 .passage small { color: var(--muted); display: block; font-family: var(--mono); font-size: 12px; }
 .tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bad); color: var(--panel); }
 .history { max-height: 460px; overflow-y: auto; }
+.alerts { max-width: 1240px; margin: 0 auto; display: grid; gap: 8px; }
+.alerts:not(:empty) { margin-bottom: 14px; }
+.alert { display: flex; align-items: center; gap: 12px; background: var(--bad); color: var(--panel); border-radius: 10px; padding: 12px 16px; font-weight: 700; font-size: 17px; }
+.alert span { flex: 1; min-width: 0; }
+.alert small { font-weight: 500; opacity: .85; font-size: 13px; }
+.alert button { background: transparent; color: var(--panel); border-color: var(--panel); padding: 4px 10px; font-size: 13px; }
+.alertrow { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+.alertrow:first-child { border-top: 0; }
+.alertrow small { color: var(--muted); font-family: var(--mono); white-space: nowrap; }
 .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .ctl.green { background: var(--ok); border-color: var(--ok); }
 .ctl.red { background: var(--bad); border-color: var(--bad); }
@@ -114,6 +123,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   </div>
 </header>
 
+<div class="alerts" id="alerts" role="alert" aria-live="assertive"></div>
+
 <main id="main">
   <div class="col" id="col-video">
     <div class="card video"><img src="/video" alt="Caméra en direct avec les visages encadrés"></div>
@@ -163,6 +174,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       <h2>Température (°C)</h2><canvas class="chart" id="chart-temp"></canvas>
       <h2>Humidité (%)</h2><canvas class="chart" id="chart-hum"></canvas>
       <h2>Gaz (0 – 1023, plus c'est haut, plus il y a de gaz)</h2><canvas class="chart" id="chart-gas"></canvas>
+    </section>
+    <section class="card" aria-labelledby="h-alerts">
+      <h2 id="h-alerts">Dernières alertes</h2>
+      <div id="alert-history"><p class="empty">Aucune alerte pour l'instant.</p></div>
+      <p class="hint">Gaz : alerte quand la valeur dépasse nettement l'air habituel de la pièce (mesuré sur 10 min). Température : alerte au-delà de 45 °C. Un autre programme peut aussi signaler une alerte avec <code>POST /api/v1/alerts</code>.</p>
     </section>
   </div>
 
@@ -276,6 +292,38 @@ $("fire-btn").addEventListener("click", async () => {
   const r = await post("/api/control/fire", {});
   $("control-hint").textContent = r.ok ? "Tir envoyé à l'ESP." : (await r.json()).detail;
 });
+
+let alertKey = "";
+function renderAlerts(active) {
+  const key = active.map((a) => a.kind + a.at).join("|");
+  if (key === alertKey) return;
+  alertKey = key;
+  const box = $("alerts");
+  box.replaceChildren();
+  for (const a of active) {
+    const row = el("div", "alert");
+    const text = el("span", "", a.message + " ");
+    text.append(el("small", "", hhmmss(a.at) + (a.source === "api" ? " · signalée par l'API" : "")));
+    const close = el("button", "", "Masquer");
+    close.type = "button";
+    close.addEventListener("click", () => fetch("/api/v1/alerts/active/" + encodeURIComponent(a.kind), { method: "DELETE" }));
+    row.append(text, close);
+    box.append(row);
+  }
+  loadAlertHistory();
+}
+
+async function loadAlertHistory() {
+  const { history } = await (await fetch("/api/v1/alerts")).json();
+  const box = $("alert-history");
+  box.replaceChildren();
+  if (!history.length) { box.append(el("p", "empty", "Aucune alerte pour l'instant.")); return; }
+  for (const a of history) {
+    const row = el("div", "alertrow");
+    row.append(el("span", "", a.message), el("small", "", hhmmss(a.at)));
+    box.append(row);
+  }
+}
 
 async function loadPassages() {
   const rows = await (await fetch("/api/passages")).json();
@@ -444,6 +492,7 @@ async function poll() {
     const doorKey = s.door.state + s.door.text;
     if (doorKey !== lastDoor) { lastDoor = doorKey; loadPassages(); }
     renderClimate(s.link);
+    renderAlerts(s.alerts);
 
     threshold = s.threshold;
     if (!dragging) { slider.value = threshold; $("threshold-value").textContent = threshold.toFixed(2); }

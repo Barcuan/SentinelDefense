@@ -45,3 +45,16 @@ def test_snapshot_names_cannot_escape_the_folder():
     assert valid_snapshot("1791300000123.jpg")
     for name in ["../sentinel.db", "a.jpg", "123.png", "123.jpg/..", ""]:
         assert not valid_snapshot(name), name
+
+
+def test_alerts_come_back_newest_first(tmp_path):
+    from sentinel.alerts import Alert
+
+    store = Store(tmp_path / "s.db")
+    store.add_alert(Alert(1.0, "gas", "Fuite de gaz : 400", 400.0, "capteurs"))
+    store.add_alert(Alert(2.0, "porte", "Porte forcée", None, "api"))
+
+    rows = store.alerts()
+
+    assert [r["kind"] for r in rows] == ["porte", "gas"]
+    assert rows[1]["value"] == 400.0 and rows[0]["source"] == "api"

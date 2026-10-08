@@ -22,9 +22,10 @@ import numpy as np
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from sentinel import face_id
+from sentinel.alerts import AlertMonitor
 from sentinel.door import Door, Smoother, pick_face
 from sentinel.enroll import FACES_DIR, SHOT_EVERY_S, SHOTS, build_gallery
 from sentinel.face_id import (
@@ -196,9 +197,16 @@ link = Link()
 camera = Camera(Door(link), store)
 
 
+monitor = AlertMonitor()
+ALERT_VOICE = {"gas": "Alerte. Fuite de gaz détectée.", "temp": "Alerte. Surchauffe détectée."}
+
+
 def record_reading(reading: dict[str, float]) -> None:
     now = time.time()
     store.add_reading(now, reading)
+    for alert in monitor.push(reading, now):
+        store.add_alert(alert)
+        speak(ALERT_VOICE[alert.kind])
     if int(now) % 300 == 0:  # environ toutes les 5 min
         store.prune(now)
 
@@ -248,6 +256,8 @@ def live() -> dict[str, Any]:
         "error": camera.error,
         "enrollment": {"name": enrollment.name, "taken": enrollment.taken, "total": SHOTS} if enrollment else None,
         "rebuilding": camera.rebuild_requested,
+        "alerts": [{"kind": a.kind, "message": a.message, "at": a.at, "source": a.source}
+                   for a in monitor.active.values()],
         "door": {"state": camera.door.command.state, "text": camera.door.command.text, "armed": camera.door.armed},
         "link": {
             "status": link.status,
@@ -321,6 +331,33 @@ class Arm(BaseModel):
 def arm(body: Arm) -> dict[str, bool]:
     camera.door.armed = body.armed
     return {"armed": camera.door.armed}
+
+
+class NewAlert(BaseModel):
+    """Point d'entrée demandé par le sujet : un autre programme peut signaler une alerte au poste."""
+
+    kind: str = Field(pattern=r"^[a-z0-9_-]{1,20}$")
+    message: str = Field(min_length=1, max_length=120)
+    value: float | None = None
+
+
+@app.post("/api/v1/alerts", status_code=201)
+def post_alert(body: NewAlert) -> dict[str, Any]:
+    alert = monitor.external(body.kind, body.message, body.value, time.time())
+    store.add_alert(alert)
+    return {"kind": alert.kind, "message": alert.message, "at": alert.at}
+
+
+@app.get("/api/v1/alerts")
+def get_alerts() -> dict[str, Any]:
+    active = [{"kind": a.kind, "message": a.message, "at": a.at, "source": a.source} for a in monitor.active.values()]
+    return {"active": active, "history": store.alerts()}
+
+
+@app.delete("/api/v1/alerts/active/{kind}")
+def dismiss_alert(kind: str) -> dict[str, str]:
+    monitor.clear(kind)
+    return {"cleared": kind}
 
 
 class LedTest(BaseModel):
