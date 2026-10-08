@@ -1,5 +1,6 @@
 """La porte : décide avec guard.decide et n'envoie à l'ESP que ce qui change."""
 
+import threading
 import time
 from collections import Counter, deque
 from collections.abc import Callable
@@ -18,6 +19,7 @@ def pick_face(faces: list[Face]) -> Face | None:
     return next((f for f in faces if f.authorized), faces[0] if faces else None)
 
 
+LED_TEST_S = 3.0  # durée d'un test de LED depuis le panneau de commande
 WINDOW_S = 0.6  # on juge sur ~0,6 s d'images, pas sur une seule
 MIN_FRAMES = 4  # pas de verdict avant d'avoir vu au moins 4 images
 MAJORITY = 0.7  # un verdict (prénom ou inconnu) doit tenir sur 70 % des images de la fenêtre
@@ -56,18 +58,39 @@ class Door:
         self._last_shot = 0
         self._passage: tuple[str, str | None] | None = None
         self.passage_started = False  # vrai pendant l'image où une nouvelle personne apparaît
+        self._test_until = 0.0
+        self._lock = threading.Lock()  # thread caméra + requêtes du panneau de commande
 
     def step(self, face: Face | None, now: float) -> Command:
-        self.state, self.command = decide(self.state, face, self.armed, now)
-        if self.command.state != self._led:
-            self._led = self.command.state
-            self.link.publish(T_LED, self._led, retain=True)  # retenu : l'ESP retrouve l'état s'il redémarre
-        if self.command.fire:
-            # Numéro de tir en secondes (tient dans un long de l'ESP), toujours croissant, jamais retenu.
-            self._last_shot = max(self._last_shot + 1, int(self.wall_clock()))
-            self.link.publish(T_FIRE, str(self._last_shot))
-        self._track_passage(face)
-        return self.command
+        with self._lock:
+            self.state, self.command = decide(self.state, face, self.armed, now)
+            if self.command.state != self._led and now >= self._test_until:
+                self._led = self.command.state
+                self.link.publish(T_LED, self._led, retain=True)  # retenu : l'ESP retrouve l'état s'il redémarre
+            if self.command.fire:
+                self._fire()
+            self._track_passage(face)
+            return self.command
+
+    def test_led(self, state: str, now: float) -> None:
+        """Panneau de commande : allume une couleur LED_TEST_S secondes, puis la porte reprend la main."""
+        with self._lock:
+            self._led = state
+            self._test_until = now + LED_TEST_S
+            self.link.publish(T_LED, state, retain=True)
+
+    def manual_fire(self) -> bool:
+        """Panneau de commande : tir immédiat, seulement si le système est armé."""
+        with self._lock:
+            if not self.armed:
+                return False
+            self._fire()
+            return True
+
+    def _fire(self) -> None:
+        # Numéro de tir en secondes (tient dans un long de l'ESP), toujours croissant, jamais retenu.
+        self._last_shot = max(self._last_shot + 1, int(self.wall_clock()))
+        self.link.publish(T_FIRE, str(self._last_shot))
 
     def _track_passage(self, face: Face | None) -> None:
         """Un passage = une personne (connue ou non) jusqu'au retour à l'état idle : une ligne d'historique, pas une par image."""

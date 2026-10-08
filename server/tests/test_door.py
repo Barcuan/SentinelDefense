@@ -131,3 +131,31 @@ def test_face_lost_briefly_is_the_same_passage_but_coming_back_later_is_new():
 
 def test_missing_mosquitto_is_reported_as_none(tmp_path):
     assert find_mosquitto([Path(tmp_path / "nulle-part" / "mosquitto.exe")]) is None
+
+
+def test_led_test_shows_the_colour_then_restores_the_door_state():
+    door, link = make_door()
+    door.step(None, now=0)
+    door.test_led("green", now=1)
+    door.step(None, now=2)  # pendant le test : on n'écrase pas la couleur
+    door.step(None, now=1 + 3.5)  # après le test : retour à l'état réel
+
+    leds = [p for t, p, _ in link.sent if t == T_LED]
+    assert leds == ["idle", "green", "idle"]
+
+
+def test_manual_shot_is_refused_when_disarmed():
+    door, link = make_door()
+
+    assert door.manual_fire() is False
+    assert not [m for m in link.sent if m[0] == T_FIRE]
+
+
+def test_manual_shot_when_armed_sends_a_fresh_id():
+    door, link = make_door()
+    door.armed = True
+
+    assert door.manual_fire() is True
+    assert door.manual_fire() is True
+    ids = [p for t, p, _ in link.sent if t == T_FIRE]
+    assert len(ids) == 2 and ids[0] != ids[1]

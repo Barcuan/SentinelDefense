@@ -15,7 +15,7 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import cv2
 import numpy as np
@@ -321,6 +321,25 @@ class Arm(BaseModel):
 def arm(body: Arm) -> dict[str, bool]:
     camera.door.armed = body.armed
     return {"armed": camera.door.armed}
+
+
+class LedTest(BaseModel):
+    state: Literal["green", "red", "idle"]
+
+
+@app.post("/api/control/led")
+def control_led(body: LedTest) -> dict[str, str]:
+    camera.door.test_led(body.state, time.monotonic())
+    return {"led": body.state}
+
+
+@app.post("/api/control/fire")
+def control_fire() -> dict[str, bool]:
+    if not camera.door.manual_fire():
+        raise HTTPException(409, "Armez d'abord le système pour pouvoir tirer.")
+    if camera.door.command.state == "red":
+        camera.store.mark_fired(camera._passage_id)
+    return {"fired": True}
 
 
 class Threshold(BaseModel):

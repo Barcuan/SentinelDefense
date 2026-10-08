@@ -54,6 +54,12 @@ main.wide { grid-template-columns: minmax(0, 1fr); }
 .passage small { color: var(--muted); display: block; font-family: var(--mono); font-size: 12px; }
 .tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bad); color: var(--panel); }
 .history { max-height: 460px; overflow-y: auto; }
+.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ctl.green { background: var(--ok); border-color: var(--ok); }
+.ctl.red { background: var(--bad); border-color: var(--bad); }
+.ctl.off { background: transparent; color: var(--ink); border-color: var(--line); }
+.ctl.fire { background: transparent; color: var(--bad); border-color: var(--bad); }
+.ctl.fire.confirm { background: var(--bad); color: var(--panel); }
 .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 .tile .label { color: var(--muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
@@ -120,6 +126,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       <h2 id="h-arm">Arbalète</h2>
       <button type="button" id="arm-btn">Armer le système</button>
       <p id="arm-hint">Désarmé : la porte allume ses LED et prononce l'avertissement, mais ne tire jamais.</p>
+    </section>
+    <section class="card" aria-labelledby="h-control">
+      <h2 id="h-control">Panneau de commande</h2>
+      <div class="controls">
+        <button type="button" class="ctl green" data-led="green">LED verte</button>
+        <button type="button" class="ctl red" data-led="red">LED rouge</button>
+        <button type="button" class="ctl off" data-led="idle">Éteindre</button>
+        <button type="button" class="ctl fire" id="fire-btn">Tir test</button>
+      </div>
+      <p class="hint" id="control-hint">Les LED changent 3 secondes, puis la porte reprend la main. Le tir test demande que le système soit armé.</p>
     </section>
     <section class="card" aria-labelledby="h-history">
       <h2 id="h-history">Derniers passages</h2>
@@ -234,6 +250,7 @@ function renderVerdict(door) {
 }
 
 function renderArm() {
+  $("fire-btn").disabled = !armed;
   $("arm-btn").textContent = armed ? "ARMÉ : désarmer" : "Armer le système";
   $("arm-btn").classList.toggle("armed", armed);
   $("arm-hint").textContent = armed
@@ -243,6 +260,21 @@ function renderArm() {
 $("arm-btn").addEventListener("click", async () => {
   const r = await post("/api/arm", { armed: !armed });
   if (r.ok) { armed = (await r.json()).armed; renderArm(); }
+});
+
+for (const b of document.querySelectorAll(".ctl[data-led]")) {
+  b.addEventListener("click", () => post("/api/control/led", { state: b.dataset.led }));
+}
+$("fire-btn").addEventListener("click", async () => {
+  const b = $("fire-btn");
+  if (!b.classList.contains("confirm")) {
+    b.classList.add("confirm"); b.textContent = "Confirmer le tir ?";
+    setTimeout(() => { b.classList.remove("confirm"); b.textContent = "Tir test"; }, 3000);
+    return;
+  }
+  b.classList.remove("confirm"); b.textContent = "Tir test";
+  const r = await post("/api/control/fire", {});
+  $("control-hint").textContent = r.ok ? "Tir envoyé à l'ESP." : (await r.json()).detail;
 });
 
 async function loadPassages() {
