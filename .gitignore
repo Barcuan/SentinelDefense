@@ -27,3 +27,6 @@ server/models/
 data/
 link/
 firmware/*/secrets.h
+
+# Rendus du workshop (PowerPoint, PDF, vidéo) : déposés à part, pas dans le zip du code
+rendus/
