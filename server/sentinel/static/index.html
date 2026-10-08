@@ -379,7 +379,8 @@ function drawChart(canvas, points, key, color) {
   ctx.fillText(hhmmss(t0), pad.l, h - 6);
   const end = hhmmss(t1); ctx.fillText(end, w - pad.r - ctx.measureText(end).width, h - 6);
   ctx.beginPath();
-  pts.forEach((p, i) => (i ? ctx.lineTo(x(p.at), y(p[key])) : ctx.moveTo(x(p.at), y(p[key]))));
+  // Plus de 30 s sans mesure (ESP éteint) : on coupe la courbe au lieu de tirer un trait trompeur.
+  pts.forEach((p, i) => (i && p.at - pts[i - 1].at < 30 ? ctx.lineTo(x(p.at), y(p[key])) : ctx.moveTo(x(p.at), y(p[key]))));
   ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
   const last = pts[pts.length - 1];
   ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x(last.at), y(last[key]), 3.5, 0, 2 * Math.PI); ctx.fill();
