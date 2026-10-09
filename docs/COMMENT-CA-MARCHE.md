@@ -64,6 +64,10 @@ Ils utilisent **MQTT**, un système de messages fait pour les objets connectés.
 - le dashboard n'est visible que depuis le PC lui-même ;
 - les mots de passe et certificats sont générés à l'installation et ne vont jamais sur GitHub.
 
+## La supervision du serveur
+
+L'onglet **Serveur** du dashboard montre la charge du processeur et de la mémoire du PC, le nombre de messages échangés avec l'ESP, et le journal du broker : chaque connexion acceptée apparaît en vert, chaque tentative refusée (mauvais mot de passe, connexion non chiffrée) en rouge, avec l'adresse de l'appareil qui a essayé.
+
 ## Les alertes environnement
 
 - **Gaz** : le programme apprend la valeur habituelle de la pièce (sur 10 minutes). Si le gaz monte nettement au-dessus, c'est une fuite : bandeau rouge sur le dashboard et « Alerte. Fuite de gaz détectée » à voix haute.

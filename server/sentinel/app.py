@@ -38,7 +38,8 @@ from sentinel.face_id import (
     save_gallery,
 )
 from sentinel.guard import Face
-from sentinel.mqtt import Link
+from sentinel.monitor import parse_broker_line, system_stats, tail
+from sentinel.mqtt import BROKER_LOG, Link
 from sentinel.store import SNAPSHOTS, Store, valid_snapshot
 
 STATIC = Path(__file__).parent / "static"
@@ -331,6 +332,18 @@ class Arm(BaseModel):
 def arm(body: Arm) -> dict[str, bool]:
     camera.door.armed = body.armed
     return {"armed": camera.door.armed}
+
+
+@app.get("/api/system")
+def system() -> dict[str, Any]:
+    events = [e for e in (parse_broker_line(line) for line in tail(BROKER_LOG, 400)) if e]
+    return {
+        **system_stats(),
+        "mqtt_received": link.received,
+        "mqtt_sent": link.sent,
+        "refused": sum(1 for e in events if e["level"] == "refus"),
+        "events": events[-40:][::-1],
+    }
 
 
 class NewAlert(BaseModel):

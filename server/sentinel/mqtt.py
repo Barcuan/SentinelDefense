@@ -11,6 +11,7 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
+from sentinel.monitor import runtime_conf
 from sentinel.setup import MQTT_PORT, ROOT, load_env
 
 T_LED = "sentinel/door/led"
@@ -19,6 +20,7 @@ T_CLIMATE = "sentinel/door/climate"
 T_STATUS = "sentinel/door/status"
 
 LINK = ROOT / "link"
+BROKER_LOG = LINK / "mosquitto.log"
 MOSQUITTO_PLACES = [
     Path(r"C:\Program Files\mosquitto\mosquitto.exe"),
     Path(r"C:\Program Files (x86)\mosquitto\mosquitto.exe"),
@@ -61,6 +63,8 @@ class Link:
         self.climate: dict[str, float] = {}
         self.climate_at = 0.0
         self.on_climate: Callable[[dict[str, float]], None] | None = None
+        self.received = 0
+        self.sent = 0
         self._broker: subprocess.Popen[bytes] | None = None
         self._client: mqtt.Client | None = None
 
@@ -73,7 +77,11 @@ class Link:
             self.status = "Mosquitto introuvable : lancez install.bat"
             return
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        self._broker = subprocess.Popen([str(exe), "-c", str(conf)], stdout=subprocess.DEVNULL,
+        # Copie de la configuration avec le journal dans un fichier, lu par l'onglet Serveur du dashboard.
+        BROKER_LOG.write_text("", encoding="utf-8")
+        run_conf = LINK / "mosquitto.run.conf"
+        run_conf.write_text(runtime_conf(conf.read_text(encoding="utf-8"), BROKER_LOG), encoding="utf-8")
+        self._broker = subprocess.Popen([str(exe), "-c", str(run_conf)], stdout=subprocess.DEVNULL,
                                         stderr=subprocess.DEVNULL, creationflags=flags)
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="sentinel-server")
         client.tls_set(ca_certs=str(LINK / "certs" / "ca.crt"))
@@ -98,6 +106,7 @@ class Link:
     def publish(self, topic: str, payload: str, retain: bool = False) -> None:
         if self._client:
             self._client.publish(topic, payload, qos=1, retain=retain)
+            self.sent += 1
 
     def _on_connect(self, client: mqtt.Client, _userdata: Any, _flags: Any, reason: Any, _props: Any) -> None:
         if reason.is_failure:
@@ -113,6 +122,7 @@ class Link:
         self.status = "broker déconnecté, reconnexion…"
 
     def _on_message(self, _client: mqtt.Client, _userdata: Any, message: mqtt.MQTTMessage) -> None:
+        self.received += 1
         if message.topic == T_STATUS:
             self.esp_online = message.payload == b"online"
         elif message.topic == T_CLIMATE:

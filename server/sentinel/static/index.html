@@ -62,6 +62,11 @@ main.wide { grid-template-columns: minmax(0, 1fr); }
 .alert button { background: transparent; color: var(--panel); border-color: var(--panel); padding: 4px 10px; font-size: 13px; }
 .alertrow { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
 .alertrow:first-child { border-top: 0; }
+.logrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.logrow:first-child { border-top: 0; }
+.logrow.refus { color: var(--bad); font-weight: 600; }
+.logrow.ok { color: var(--ok); }
+.logrow small { color: var(--muted); font-family: var(--mono); font-weight: 400; }
 .alertrow small { color: var(--muted); font-family: var(--mono); white-space: nowrap; }
 .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .ctl.green { background: var(--ok); border-color: var(--ok); }
@@ -115,6 +120,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     <button role="tab" id="tab-surveillance" aria-controls="panel-surveillance" aria-selected="true" data-tab="surveillance">Surveillance</button>
     <button role="tab" id="tab-capteurs" aria-controls="panel-capteurs" aria-selected="false" data-tab="capteurs">Capteurs</button>
     <button role="tab" id="tab-visages" aria-controls="panel-visages" aria-selected="false" data-tab="visages">Visages</button>
+    <button role="tab" id="tab-serveur" aria-controls="panel-serveur" aria-selected="false" data-tab="serveur">Serveur</button>
   </nav>
   <div class="chips" aria-live="polite">
     <span class="chip off" id="chip-camera">caméra…</span>
@@ -182,6 +188,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     </section>
   </div>
 
+  <div class="col" id="panel-serveur" role="tabpanel" aria-labelledby="tab-serveur" hidden>
+    <div class="tiles">
+      <div class="tile"><div class="label">Processeur</div><div><span class="value" id="v-cpu">–</span><span class="unit">%</span></div></div>
+      <div class="tile"><div class="label">Mémoire du PC</div><div><span class="value" id="v-ram">–</span><span class="unit">%</span></div><div class="meta" id="v-ram-gb"></div></div>
+      <div class="tile"><div class="label">Programme Sentinel-X</div><div><span class="value" id="v-proc">–</span><span class="unit">Mo</span></div><div class="meta" id="v-uptime"></div></div>
+      <div class="tile"><div class="label">Messages MQTT</div><div><span class="value" id="v-mqtt">–</span></div><div class="meta">reçus / envoyés</div></div>
+      <div class="tile"><div class="label">Connexions refusées</div><div><span class="value" id="v-refused">–</span></div><div class="meta">depuis le démarrage</div></div>
+    </div>
+    <section class="card">
+      <h2>Processeur (%), dernières minutes</h2><canvas class="chart" id="chart-cpu"></canvas>
+      <h2>Mémoire du PC (%)</h2><canvas class="chart" id="chart-ram"></canvas>
+    </section>
+    <section class="card" aria-labelledby="h-broker">
+      <h2 id="h-broker">Journal du broker MQTT</h2>
+      <div class="history" id="broker-log"><p class="empty">Aucun événement pour l'instant.</p></div>
+      <p class="hint">En rouge : tentatives de connexion refusées (mot de passe faux ou absent, connexion sans chiffrement). Elles montrent que le broker bloque les intrus.</p>
+    </section>
+  </div>
+
   <div class="col" id="panel-visages" role="tabpanel" aria-labelledby="tab-visages" hidden>
     <section class="card" aria-labelledby="h-live">
       <h2 id="h-live">Devant la caméra</h2>
@@ -244,18 +269,20 @@ function setChip(id, text, kind) {
 function showTab(name) {
   tab = name;
   for (const b of document.querySelectorAll("nav button")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
-  for (const t of ["surveillance", "capteurs", "visages"]) $("panel-" + t).hidden = t !== name;
-  $("col-video").hidden = name === "capteurs";
-  $("main").classList.toggle("wide", name === "capteurs");
+  for (const t of ["surveillance", "capteurs", "visages", "serveur"]) $("panel-" + t).hidden = t !== name;
+  const wide = name === "capteurs" || name === "serveur";
+  $("col-video").hidden = wide;
+  $("main").classList.toggle("wide", wide);
   try { localStorage.setItem("sentinel-tab", name); } catch {}
   if (history.replaceState) history.replaceState(null, "", "#" + name);
   if (name === "capteurs") loadReadings();
   if (name === "visages") loadPeople();
+  if (name === "serveur") loadSystem();
 }
 for (const b of document.querySelectorAll("nav button")) b.addEventListener("click", () => showTab(b.dataset.tab));
 window.addEventListener("hashchange", () => {
   const name = location.hash.slice(1);
-  if (["surveillance", "capteurs", "visages"].includes(name) && name !== tab) showTab(name);
+  if (["surveillance", "capteurs", "visages", "serveur"].includes(name) && name !== tab) showTab(name);
 });
 
 /* ---------- surveillance ---------- */
@@ -321,6 +348,31 @@ async function loadAlertHistory() {
   for (const a of history) {
     const row = el("div", "alertrow");
     row.append(el("span", "", a.message), el("small", "", hhmmss(a.at)));
+    box.append(row);
+  }
+}
+
+const sysHistory = [];
+async function loadSystem() {
+  const s = await (await fetch("/api/system")).json();
+  $("v-cpu").textContent = s.cpu.toFixed(0);
+  $("v-ram").textContent = s.ram.toFixed(0);
+  $("v-ram-gb").textContent = `${s.ram_used_gb} / ${s.ram_total_gb} Go`;
+  $("v-proc").textContent = s.process_mb;
+  $("v-uptime").textContent = `lancé depuis ${Math.floor(s.uptime_s / 60)} min`;
+  $("v-mqtt").textContent = `${s.mqtt_received} / ${s.mqtt_sent}`;
+  $("v-refused").textContent = s.refused;
+  sysHistory.push({ at: Date.now() / 1000, cpu: s.cpu, ram: s.ram });
+  if (sysHistory.length > 150) sysHistory.shift();
+  const css = getComputedStyle(document.documentElement);
+  drawChart($("chart-cpu"), sysHistory, "cpu", css.getPropertyValue("--c-temp").trim());
+  drawChart($("chart-ram"), sysHistory, "ram", css.getPropertyValue("--c-hum").trim());
+  const box = $("broker-log");
+  box.replaceChildren();
+  if (!s.events.length) { box.append(el("p", "empty", "Aucun événement pour l'instant.")); return; }
+  for (const e of s.events) {
+    const row = el("div", "logrow " + e.level);
+    row.append(el("small", "", hhmmss(e.at)), el("span", "", e.text), el("small", "", e.ip || ""));
     box.append(row);
   }
 }
@@ -511,16 +563,17 @@ async function poll() {
 }
 
 let start = location.hash.slice(1);
-if (!["surveillance", "capteurs", "visages"].includes(start)) {
+if (!["surveillance", "capteurs", "visages", "serveur"].includes(start)) {
   try { start = localStorage.getItem("sentinel-tab") || "surveillance"; } catch { start = "surveillance"; }
 }
-showTab(["surveillance", "capteurs", "visages"].includes(start) ? start : "surveillance");
+showTab(["surveillance", "capteurs", "visages", "serveur"].includes(start) ? start : "surveillance");
 renderArm();
 loadPassages();
 poll();
 setInterval(poll, 400);
 setInterval(loadPassages, 5000);
 setInterval(() => { if (tab === "capteurs") loadReadings(); }, 5000);
+setInterval(() => { if (tab === "serveur") loadSystem(); }, 2000);
 </script>
 </body>
 </html>

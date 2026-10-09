@@ -34,7 +34,8 @@ Double-cliquez sur **`start.bat`**. Tout démarre (broker chiffré, caméra, log
 
 - **Surveillance** : caméra en direct, verdict en gros, bouton **Armer**, **panneau de commande** (LED verte/rouge 3 s, tir test si armé), historique des passages avec les captures des inconnus ;
 - **Capteurs** : température, humidité et gaz, avec des courbes sur 15 min à 24 h, et l'historique des **alertes** ;
-- **Visages** : enregistrer un visage (prénom + bouton, 10 photos), supprimer, régler le seuil de reconnaissance.
+- **Visages** : enregistrer un visage (prénom + bouton, 10 photos), supprimer, régler le seuil de reconnaissance ;
+- **Serveur** : charge du processeur et de la mémoire, messages MQTT échangés, et journal du broker avec les tentatives de connexion refusées en rouge.
 
 **Alertes** : une fuite de gaz (valeur nettement au-dessus de l'air habituel de la pièce) ou une surchauffe (> 45 °C) affiche un bandeau rouge dans tous les onglets et le PC l'annonce à voix haute. Un autre programme peut signaler une alerte avec `POST /api/v1/alerts` (`{"kind": "porte", "message": "Porte forcée"}`).
 
