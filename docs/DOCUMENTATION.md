@@ -317,6 +317,4 @@ Chaque tentative refusée apparaît en direct en rouge dans l'onglet Serveur du 
 ## 14. Limites et pistes d'amélioration
 
 - **Détection du vivant.** Une photo d'un membre montrée sur un téléphone est reconnue comme ce membre, car le système compare des apparences. Une parade serait de demander à la personne de tourner la tête, ou d'ajouter un modèle anti-usurpation.
-- **Conteneurs Docker.** Mettre le broker, la base de données et l'API dans des conteneurs, comme le propose le sujet.
 - **Alimentation.** Séparer l'alimentation du servo et du capteur de gaz de celle de l'ESP pour plus de stabilité.
-- **IA prédictive.** Détecter les anomalies sur les mesures des capteurs avec un modèle comme Isolation Forest.
