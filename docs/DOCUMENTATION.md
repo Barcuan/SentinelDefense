@@ -20,7 +20,7 @@ Nous avons conçu Sentinel-X, le module de contrôle d'accès de l'avant-poste. 
 
 | Menace du sujet | Ce que fait Sentinel-X |
 |---|---|
-| Intrusion physique | Reconnaissance faciale à l'entrée, voyant vert ou rouge, avertissement vocal, photo de l'intrus et tir de dissuasion avec une arbalète imprimée en 3D |
+| Intrusion physique | Reconnaissance faciale à l'entrée, voyant vert ou rouge, avertissement vocal, photo de l'intrus et déclenchement d'un tir de dissuasion par servomoteur |
 | Fuite de gaz, surchauffe | Mesure du gaz, de la température et de l'humidité, avec une alerte automatique |
 | Cyberattaque | Liaison chiffrée entre le boîtier et le serveur, un compte par appareil, des droits limités et un journal des tentatives refusées |
 
@@ -36,7 +36,7 @@ Le rôle de serveur est tenu par un ordinateur portable, sur lequel la webcam es
 |---|---|---|
 | 0 s | LED verte et message « Bienvenue » avec son prénom | LED rouge, message « ACCÈS REFUSÉ » et photo enregistrée dans l'historique |
 | 3 s | Rien de plus | Le PC annonce à voix haute « Personne inconnue. Si vous ne vous éloignez pas de la zone, nous ouvrirons le feu. » |
-| 11 s | Rien de plus | Si la personne est toujours là et que le système est armé, l'arbalète tire une balle en mousse |
+| 11 s | Rien de plus | Si la personne est toujours là et que le système est armé, le servo déclenche le tir |
 
 Quelques règles complètent ce scénario.
 
@@ -44,6 +44,10 @@ Quelques règles complètent ce scénario.
 - Si un membre de l'équipe est dans l'image à côté d'un inconnu, la porte reste verte. Nous considérons qu'il accompagne un invité, donc il n'y a ni avertissement ni tir.
 - Deux tirs sont toujours séparés d'au moins 10 secondes.
 - Le tir part à 11 secondes et non à 3, pour laisser à la personne le temps d'entendre l'avertissement (la phrase dure environ 7 secondes) et de partir.
+
+### Le mécanisme de tir
+
+Le tir est déclenché par un servomoteur SG90, qui fait un aller-retour sur ordre du serveur. Une arbalète imprimée en 3D, tirant une balle en mousse, était prévue pour être montée sur ce servo. Dans la version présentée, le servo représente le mécanisme de déclenchement, et toute la chaîne de décision qui y mène est fonctionnelle.
 
 ### Les alertes environnement
 
@@ -62,7 +66,7 @@ Le système repose sur trois blocs.
  │  C270 HD    │ ──────▶ │  IA de vision                │ chiffré  │  LED verte et rouge    │
  └─────────────┘         │  Logique de la porte         │ ◀──────▶ │  Température, humidité │
                          │  Broker MQTT (Mosquitto)     │   TLS    │  Capteur de gaz        │
-                         │  Base de données SQLite      │          │  Servo de l'arbalète   │
+                         │  Base de données SQLite      │          │  Servo de tir          │
                          │  Dashboard web               │          └────────────────────────┘
                          └──────────────────────────────┘
                                         │
@@ -102,7 +106,7 @@ L'ESP8266 se connecte au partage de connexion Wi-Fi du PC serveur. Ce réseau d�
 | 2 LED, verte et rouge | Indiquent si l'accès est autorisé ou refusé |
 | Module DHT11 (KY-015) | Mesure la température et l'humidité |
 | Capteur de gaz « Flying Fish » | Mesure la présence de gaz |
-| Servo SG90 | Déclenche l'arbalète imprimée en 3D |
+| Servo SG90 | Représente le mécanisme de tir (arbalète imprimée en 3D prévue) |
 | Breadboards, résistances 330 Ω, 10 kΩ et 100 kΩ, fils | Montage et liaisons |
 
 ### Le câblage de l'ESP8266
@@ -123,7 +127,7 @@ Le capteur de gaz fonctionne en 5 V et sa sortie peut donc monter jusqu'à 5 V. 
 
 ### Pourquoi le servo n'est jamais sur D4
 
-Au démarrage de la carte, avant même le lancement de notre programme, la broche D4 envoie une rafale d'impulsions. C'est aussi pour cela que la LED bleue de la carte clignote au branchement. Un servo se pilote justement par impulsions. Branché sur D4, il bougerait tout seul à chaque démarrage et risquerait de déclencher l'arbalète. La broche D2 reste silencieuse au démarrage, et notre programme place le servo en position de repos avant toute autre action.
+Au démarrage de la carte, avant même le lancement de notre programme, la broche D4 envoie une rafale d'impulsions. C'est aussi pour cela que la LED bleue de la carte clignote au branchement. Un servo se pilote justement par impulsions. Branché sur D4, il bougerait tout seul à chaque démarrage et risquerait de déclencher un tir. La broche D2 reste silencieuse au démarrage, et notre programme place le servo en position de repos avant toute autre action.
 
 ### Méthode de montage
 
@@ -317,4 +321,7 @@ Chaque tentative refusée apparaît en direct en rouge dans l'onglet Serveur du 
 ## 14. Limites et pistes d'amélioration
 
 - **Détection du vivant.** Une photo d'un membre montrée sur un téléphone est reconnue comme ce membre, car le système compare des apparences. Une parade serait de demander à la personne de tourner la tête, ou d'ajouter un modèle anti-usurpation.
+- **Arbalète imprimée en 3D.** Monter sur le servo l'arbalète prévue, avec une balle en mousse, visée au niveau du torse.
+- **Visée automatique.** Ajouter un second servo qui oriente l'arbalète vers l'intrus, à partir de la position de son visage dans l'image de la caméra.
+- **Caméra dans la salle.** Ajouter une seconde caméra fixe à l'intérieur de la salle pour la surveiller entièrement. Une caméra unique que l'on ferait tourner avec un moteur laisserait des angles morts à chaque instant, alors que deux caméras fixes couvrent l'entrée et la salle en permanence.
 - **Alimentation.** Séparer l'alimentation du servo et du capteur de gaz de celle de l'ESP pour plus de stabilité.
