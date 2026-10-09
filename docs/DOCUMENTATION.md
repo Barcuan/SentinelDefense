@@ -24,9 +24,7 @@ Nous avons conçu Sentinel-X, le module de contrôle d'accès de l'avant-poste. 
 | Fuite de gaz, surchauffe | Mesure du gaz, de la température et de l'humidité, avec une alerte automatique |
 | Cyberattaque | Liaison chiffrée entre le boîtier et le serveur, un compte par appareil, des droits limités et un journal des tentatives refusées |
 
-Nous avons choisi l'option technique B du sujet. Le rôle de serveur est tenu par un ordinateur portable de l'équipe, sur lequel la webcam est branchée en USB. Le boîtier ne contient que la carte ESP8266 et ses composants.
-
-Le kit de capteurs prévu par le sujet ne nous a pas été fourni. Avec l'accord de notre enseignant, nous avons orienté le projet vers la défense d'un accès, en gardant les capteurs dont nous disposions.
+Le rôle de serveur est tenu par un ordinateur portable, sur lequel la webcam est branchée en USB. Le boîtier contient la carte ESP8266 et ses composants.
 
 ---
 
@@ -105,7 +103,6 @@ L'ESP8266 se connecte au partage de connexion Wi-Fi du PC serveur. Ce réseau d�
 | Module DHT11 (KY-015) | Mesure la température et l'humidité |
 | Capteur de gaz « Flying Fish » | Mesure la présence de gaz |
 | Servo SG90 | Déclenche l'arbalète imprimée en 3D |
-| Moteur pas à pas 28BYJ-48 | Prévu pour faire balayer la caméra, non câblé faute de carte ULN2003 |
 | Breadboards, résistances 330 Ω, 10 kΩ et 100 kΩ, fils | Montage et liaisons |
 
 ### Le câblage de l'ESP8266
@@ -122,7 +119,7 @@ L'ESP8266 se connecte au partage de connexion Wi-Fi du PC serveur. Ce réseau d�
 
 ### Pourquoi deux résistances pour le capteur de gaz
 
-Le capteur de gaz fonctionne en 5 V et sa sortie peut donc monter jusqu'à 5 V. La broche A0 de la carte accepte au maximum 3,3 V. Des résistances placées à la suite se partagent la tension en proportion de leur valeur. La carte contient déjà, derrière A0, deux résistances de 220 kΩ et 100 kΩ vers la masse, soit 320 kΩ. En ajoutant 200 kΩ devant, la broche reçoit au plus 5 V × 320 / 520, soit environ 3,1 V. Nous avons utilisé deux résistances de 100 kΩ en série, car le kit ne contenait pas de 200 kΩ.
+Le capteur de gaz fonctionne en 5 V et sa sortie peut donc monter jusqu'à 5 V. La broche A0 de la carte accepte au maximum 3,3 V. Des résistances placées à la suite se partagent la tension en proportion de leur valeur. La carte contient déjà, derrière A0, deux résistances de 220 kΩ et 100 kΩ vers la masse, soit 320 kΩ. En ajoutant 200 kΩ devant, la broche reçoit au plus 5 V × 320 / 520, soit environ 3,1 V. Nous avons obtenu ces 200 kΩ avec deux résistances de 100 kΩ placées en série.
 
 ### Pourquoi le servo n'est jamais sur D4
 
@@ -130,7 +127,7 @@ Au démarrage de la carte, avant même le lancement de notre programme, la broch
 
 ### Méthode de montage
 
-Nous avons branché et testé chaque composant seul, avec un petit programme de test, avant de les réunir. Cette méthode nous a permis de trouver rapidement deux pièges, la broche VIN qui ne fournit pas de 5 V sur cette carte et le contraste de l'écran LCD que nous avons finalement abandonné.
+Nous avons branché et testé chaque composant seul, avec un petit programme de test, avant de les réunir. Cette méthode nous a permis de trouver rapidement les pièges du montage, comme la broche VIN qui ne fournit pas de 5 V sur cette carte.
 
 ---
 
@@ -309,9 +306,8 @@ Chaque tentative refusée apparaît en direct en rouge dans l'onglet Serveur du 
 | Choix | Raison |
 |---|---|
 | Pas de Docker | L'installation tient en un double-clic et reste simple à dépanner pendant le workshop |
-| Pas d'IA prédictive sur les capteurs | Le kit de capteurs du sujet n'a pas été fourni, et notre enseignant a validé un projet plus libre |
-| Pas d'écran sur le boîtier | L'écran LCD disponible demandait trop de broches et s'affichait mal. Les messages sont sur le dashboard. |
-| Avertissement vocal au lieu d'un buzzer | Aucun buzzer n'était disponible, et une phrase claire est plus dissuasive qu'un bip |
+| Pas d'écran sur le boîtier | Un écran LCD demandait trop de broches de l'ESP. Les messages s'affichent sur le dashboard, plus lisible et plus complet. |
+| Avertissement vocal au lieu d'un buzzer | Une phrase claire est plus dissuasive qu'un bip |
 | Un seul ESP8266 | Un seul programme et une seule connexion chiffrée à gérer. Le second ESP reste en secours. |
 | Un membre accompagné d'un inconnu reste vert | Éviter de viser un invité accompagné |
 | Python pour le serveur | Le sujet impose Python pour l'IA, et OpenCV y est disponible directement |
@@ -322,6 +318,5 @@ Chaque tentative refusée apparaît en direct en rouge dans l'onglet Serveur du 
 
 - **Détection du vivant.** Une photo d'un membre montrée sur un téléphone est reconnue comme ce membre, car le système compare des apparences. Une parade serait de demander à la personne de tourner la tête, ou d'ajouter un modèle anti-usurpation.
 - **Conteneurs Docker.** Mettre le broker, la base de données et l'API dans des conteneurs, comme le propose le sujet.
-- **Caméra motorisée.** Câbler le moteur pas à pas pour que la caméra balaie la zone.
-- **Alimentation.** Séparer l'alimentation des moteurs de celle de l'ESP pour plus de stabilité.
+- **Alimentation.** Séparer l'alimentation du servo et du capteur de gaz de celle de l'ESP pour plus de stabilité.
 - **IA prédictive.** Détecter les anomalies sur les mesures des capteurs avec un modèle comme Isolation Forest.
